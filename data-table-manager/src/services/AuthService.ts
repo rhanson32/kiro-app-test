@@ -1,75 +1,144 @@
-// Authentication service interface and implementation
+// Authentication service implementation using AWS Amplify v6
 
-import { AuthUser, AuthSession, AuthError, EntraIdConfig } from '../types/Auth';
+import { 
+  signOut, 
+  getCurrentUser, 
+  fetchAuthSession,
+  signInWithRedirect,
+  AuthUser as AmplifyAuthUser
+} from 'aws-amplify/auth';
+import { AuthUser, AuthSession, AuthError } from '../types/Auth';
 
 export interface IAuthService {
   // Authentication methods
-  login(email: string, password: string): Promise<AuthSession>;
+  loginWithEntraId(): Promise<void>;
   logout(): Promise<void>;
-  refreshToken(): Promise<AuthSession>;
   
   // Session management
-  getCurrentUser(): AuthUser | null;
-  getCurrentSession(): AuthSession | null;
-  isAuthenticated(): boolean;
+  getCurrentUser(): Promise<AuthUser | null>;
+  getCurrentSession(): Promise<AuthSession | null>;
+  isAuthenticated(): Promise<boolean>;
   
   // Token management
-  getAccessToken(): string | null;
-  validateToken(token: string): Promise<boolean>;
+  getAccessToken(): Promise<string | null>;
 }
 
 export class AuthService implements IAuthService {
-  private currentUser: AuthUser | null = null;
-  private currentSession: AuthSession | null = null;
-  private entraConfig: EntraIdConfig;
-
-  constructor(config: EntraIdConfig) {
-    this.entraConfig = config;
+  /**
+   * Initiates login flow with Entra ID via OAuth redirect
+   */
+  async loginWithEntraId(): Promise<void> {
+    try {
+      await signInWithRedirect({
+        provider: { custom: 'EntraID' }
+      });
+    } catch (error) {
+      console.error('Login with Entra ID failed:', error);
+      throw this.handleAuthError(error);
+    }
   }
 
-  async login(email: string, password: string): Promise<AuthSession> {
-    // Implementation will be added in task 2
-    throw new Error('Login implementation pending - will be implemented in task 2');
-  }
-
+  /**
+   * Signs out the current user and clears session
+   */
   async logout(): Promise<void> {
-    // Implementation will be added in task 2
-    this.currentUser = null;
-    this.currentSession = null;
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      throw this.handleAuthError(error);
+    }
   }
 
-  async refreshToken(): Promise<AuthSession> {
-    // Implementation will be added in task 2
-    throw new Error('Refresh token implementation pending - will be implemented in task 2');
+  /**
+   * Gets the currently authenticated user
+   */
+  async getCurrentUser(): Promise<AuthUser | null> {
+    try {
+      const user = await getCurrentUser();
+      return this.mapAmplifyUserToAuthUser(user);
+    } catch (error) {
+      // User not authenticated
+      return null;
+    }
   }
 
-  getCurrentUser(): AuthUser | null {
-    return this.currentUser;
+  /**
+   * Gets the current authentication session
+   */
+  async getCurrentSession(): Promise<AuthSession | null> {
+    try {
+      const session = await fetchAuthSession();
+      
+      if (!session.tokens) {
+        return null;
+      }
+
+      const user = await this.getCurrentUser();
+      
+      return {
+        accessToken: session.tokens.accessToken.toString(),
+        idToken: session.tokens.idToken?.toString() || '',
+        refreshToken: '', // Refresh token is handled internally by Amplify
+        expiresAt: new Date(session.tokens.accessToken.payload.exp! * 1000),
+        user: user!
+      };
+    } catch (error) {
+      console.error('Failed to get current session:', error);
+      return null;
+    }
   }
 
-  getCurrentSession(): AuthSession | null {
-    return this.currentSession;
+  /**
+   * Checks if user is currently authenticated
+   */
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      const session = await this.getCurrentSession();
+      return session !== null && session.expiresAt > new Date();
+    } catch (error) {
+      return false;
+    }
   }
 
-  isAuthenticated(): boolean {
-    return this.currentSession !== null && 
-           this.currentSession.expiresAt > new Date();
+  /**
+   * Gets the access token for API calls
+   */
+  async getAccessToken(): Promise<string | null> {
+    try {
+      const session = await fetchAuthSession();
+      return session.tokens?.accessToken.toString() || null;
+    } catch (error) {
+      console.error('Failed to get access token:', error);
+      return null;
+    }
   }
 
-  getAccessToken(): string | null {
-    return this.currentSession?.accessToken || null;
+  /**
+   * Maps Amplify user to our AuthUser type
+   */
+  private mapAmplifyUserToAuthUser(amplifyUser: AmplifyAuthUser): AuthUser {
+    return {
+      id: amplifyUser.userId,
+      email: amplifyUser.signInDetails?.loginId || '',
+      name: amplifyUser.username,
+      roles: [], // Roles would come from token claims
+      lastLogin: new Date()
+    };
   }
 
-  async validateToken(token: string): Promise<boolean> {
-    // Implementation will be added in task 2
-    return false;
+  /**
+   * Handles authentication errors and converts to AuthError
+   */
+  private handleAuthError(error: any): AuthError {
+    const authError: AuthError = {
+      code: error.name || 'UNKNOWN_ERROR',
+      message: error.message || 'An unknown authentication error occurred',
+      name: error.name || 'AuthError'
+    };
+    return authError;
   }
 }
 
 // Export singleton instance
-export const authService = new AuthService({
-  clientId: process.env.REACT_APP_ENTRA_CLIENT_ID || '',
-  authority: process.env.REACT_APP_ENTRA_AUTHORITY || '',
-  redirectUri: process.env.REACT_APP_REDIRECT_URI || 'http://localhost:3000',
-  scopes: ['openid', 'profile', 'email', 'User.Read']
-});
+export const authService = new AuthService();

@@ -12,15 +12,17 @@ export interface AuthUser {
 
 export interface AuthSession {
   user: AuthUser;
-  isAuthenticated: boolean;
+  isAuthenticated?: boolean;
   expiresAt: Date;
   accessToken: string;
+  idToken?: string;
   refreshToken?: string;
 }
 
 export interface AuthError {
   code: string;
   message: string;
+  name?: string;
   details?: any;
 }
 

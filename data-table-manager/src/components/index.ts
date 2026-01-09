@@ -1,8 +1,10 @@
 // Component exports - will be populated as components are implemented
 
 // Authentication components (Task 2)
-// export { default as LoginForm } from './auth/LoginForm';
-// export { default as ProtectedRoute } from './auth/ProtectedRoute';
+export { Login } from './Login';
+export { Logout } from './Logout';
+export { ProtectedRoute } from './ProtectedRoute';
+export { UserProfile } from './UserProfile';
 
 // Table components (Task 4)
 // export { default as TableView } from './table/TableView';
@@ -24,6 +26,3 @@
 // export { default as LoadingSpinner } from './common/LoadingSpinner';
 // export { default as ErrorBoundary } from './common/ErrorBoundary';
 // export { default as Modal } from './common/Modal';
-
-// Placeholder export to prevent empty module error
-export const COMPONENTS_PLACEHOLDER = 'Components will be implemented in subsequent tasks';

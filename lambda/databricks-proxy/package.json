@@ -1,0 +1,13 @@
+{
+  "name": "databricks-proxy",
+  "version": "1.0.0",
+  "description": "AWS Lambda proxy for Databricks SQL API",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "zip": "zip -r function.zip index.mjs package.json"
+  },
+  "keywords": ["databricks", "lambda", "proxy"],
+  "author": "",
+  "license": "ISC"
+}

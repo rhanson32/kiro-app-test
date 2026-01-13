@@ -3,7 +3,8 @@
 import { DataEntry } from '../types/DataEntry';
 
 // Date formatting utilities
-export const formatDate = (date: Date | string): string => {
+export const formatDate = (date: Date | string | null | undefined): string => {
+  if (!date) return '-';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -12,7 +13,8 @@ export const formatDate = (date: Date | string): string => {
   });
 };
 
-export const formatDateTime = (date: Date | string): string => {
+export const formatDateTime = (date: Date | string | null | undefined): string => {
+  if (!date) return '-';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleString('en-US', {
     year: 'numeric',
@@ -24,7 +26,10 @@ export const formatDateTime = (date: Date | string): string => {
 };
 
 // Number formatting utilities
-export const formatNumber = (value: number, decimals: number = 2): string => {
+export const formatNumber = (value: number | null | undefined, decimals: number = 2): string => {
+  if (value === null || value === undefined) {
+    return '-';
+  }
   return value.toLocaleString('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals

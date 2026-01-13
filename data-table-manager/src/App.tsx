@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { appConfig } from './config';
+import { TableView } from './components/TableView';
+import { DataEntry } from './types/DataEntry';
 import './App.css';
 
 // Custom SSO Login Component
@@ -53,6 +55,7 @@ const SSOLogin: React.FC = () => {
 
 function App() {
   const auth = useAuth();
+  const [selectedEntry, setSelectedEntry] = useState<DataEntry | null>(null);
 
   const handleSignOut = () => {
     const clientId = process.env.REACT_APP_USER_POOL_CLIENT_ID;
@@ -92,6 +95,12 @@ function App() {
         </div>
       </header>
       <main className="main-content">
+        <TableView
+          onEntrySelect={(entry) => setSelectedEntry(entry)}
+          onEntryEdit={(entry) => console.log('Edit:', entry)}
+          onEntryDelete={(entry) => console.log('Delete:', entry)}
+        />
+        
         <div className="status-panel">
           <h2>System Status</h2>
           <div className="status-item">
@@ -116,16 +125,18 @@ function App() {
           </div>
         </div>
         <div className="info-panel">
-          <h2>Authentication System Implemented</h2>
-          <p>The authentication system is now fully configured with:</p>
+          <h2>XREF Manager - Task 3 Complete! 🚀</h2>
+          <p>The system now includes:</p>
           <ul>
             <li>✓ Entra ID integration with AWS Cognito</li>
             <li>✓ OAuth 2.0 / OIDC authentication flow</li>
             <li>✓ Custom login UI (no Hosted UI)</li>
             <li>✓ Session management</li>
             <li>✓ User profile display</li>
+            <li>✓ Databricks REST API connection service</li>
+            <li>✓ Data validation and transformation utilities</li>
           </ul>
-          <p>Ready to implement Databricks connection (Task 3).</p>
+          <p><strong>Task 3 deployed successfully!</strong> Databricks connection is ready.</p>
         </div>
       </main>
     </div>

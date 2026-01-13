@@ -7,7 +7,7 @@ export { ProtectedRoute } from './ProtectedRoute';
 export { UserProfile } from './UserProfile';
 
 // Table components (Task 4)
-// export { default as TableView } from './table/TableView';
+export { default as TableView } from './TableView';
 // export { default as DataTable } from './table/DataTable';
 
 // Form components (Task 6)

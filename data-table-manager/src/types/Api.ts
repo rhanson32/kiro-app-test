@@ -40,6 +40,7 @@ export interface DatabricksConfig {
   accessToken: string;
   catalog?: string;
   schema?: string;
+  table?: string;
 }
 
 export interface DatabricksQueryResult {

@@ -84,10 +84,70 @@
   font-size: 1.8rem;
 }
 
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .user-info {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgb(0, 78, 78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: white;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.user-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: white;
+}
+
+.user-email {
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.logout-button {
+  background-color: rgb(0, 78, 78);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.logout-button:hover {
+  background-color: rgb(0, 58, 58);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.logout-button:active {
+  transform: translateY(0);
 }
 
 .user-info p {
@@ -187,9 +247,19 @@
     text-align: center;
   }
   
-  .user-info {
+  .user-profile {
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .user-info {
+    justify-content: center;
+  }
+  
+  .logout-button {
+    width: 100%;
+    max-width: 200px;
   }
   
   .main-content {

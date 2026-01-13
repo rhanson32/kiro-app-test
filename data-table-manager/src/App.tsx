@@ -1,43 +1,39 @@
-import React, { useEffect, useState } from 'react';
-import { Amplify } from 'aws-amplify';
-import '@aws-amplify/ui-react/styles.css';
-import { getAmplifyConfig } from './config/auth';
+import React from 'react';
+import { useAuth } from 'react-oidc-context';
 import { appConfig } from './config';
-import { UserProfile } from './components';
-import { signInWithRedirect, getCurrentUser } from 'aws-amplify/auth';
-import type { AuthUser } from 'aws-amplify/auth';
 import './App.css';
-
-// Configure Amplify with Entra ID integration
-const configureAmplify = () => {
-  try {
-    const amplifyConfig = getAmplifyConfig();
-    Amplify.configure(amplifyConfig);
-    
-    if (appConfig.environment === 'development') {
-      console.log('Amplify configured successfully with Entra ID integration');
-      console.log('Environment:', appConfig.environment);
-      console.log('Features enabled:', appConfig.features);
-    }
-  } catch (error) {
-    console.error('Failed to configure Amplify:', error);
-  }
-};
-
-// Initialize Amplify
-configureAmplify();
 
 // Custom SSO Login Component
 const SSOLogin: React.FC = () => {
-  const handleSSOLogin = async () => {
-    try {
-      await signInWithRedirect({
-        provider: { custom: 'EntraID' }
-      });
-    } catch (error) {
-      console.error('SSO login failed:', error);
-    }
+  const auth = useAuth();
+
+  const handleSSOLogin = () => {
+    auth.signinRedirect();
   };
+
+  if (auth.isLoading) {
+    return (
+      <div className="sso-login-container">
+        <div className="sso-login-card">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (auth.error) {
+    return (
+      <div className="sso-login-container">
+        <div className="sso-login-card">
+          <h1>XREF Manager</h1>
+          <p style={{ color: 'red' }}>Error: {auth.error.message}</p>
+          <button className="sso-button" onClick={handleSSOLogin}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="sso-login-container">
@@ -56,52 +52,44 @@ const SSOLogin: React.FC = () => {
 };
 
 function App() {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const auth = useAuth();
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      // User not authenticated
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+  const handleSignOut = () => {
+    const clientId = process.env.REACT_APP_USER_POOL_CLIENT_ID;
+    const logoutUri = encodeURIComponent(process.env.REACT_APP_REDIRECT_URI || 'http://localhost:3000');
+    const cognitoDomain = process.env.REACT_APP_OAUTH_DOMAIN;
+    window.location.href = `https://${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${logoutUri}`;
   };
 
-  const handleSignOut = async () => {
-    const { signOut } = await import('aws-amplify/auth');
-    await signOut();
-    setUser(null);
-  };
-
-  if (loading) {
-    return (
-      <div className="sso-login-container">
-        <div className="sso-login-card">
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If no user, show custom SSO login
-  if (!user) {
+  // Show login if not authenticated
+  if (!auth.isAuthenticated) {
     return <SSOLogin />;
   }
 
   // Show main app when authenticated
+  const userEmail = auth.user?.profile?.email || auth.user?.profile?.sub || 'User';
+  const userName = auth.user?.profile?.name || userEmail;
+
   return (
     <div className="App">
       <header className="App-header">
         <h1>XREF Manager</h1>
-        <UserProfile onLogout={handleSignOut} />
+        <div className="user-profile">
+          <div className="user-info">
+            <div className="user-avatar">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <div className="user-details">
+              <div className="user-email">{userEmail}</div>
+            </div>
+          </div>
+          <button 
+            className="logout-button"
+            onClick={handleSignOut}
+          >
+            Sign out
+          </button>
+        </div>
       </header>
       <main className="main-content">
         <div className="status-panel">
@@ -109,10 +97,6 @@ function App() {
           <div className="status-item">
             <span className="status-label">Authentication:</span>
             <span className="status-value success">✓ Connected</span>
-          </div>
-          <div className="status-item">
-            <span className="status-label">User:</span>
-            <span className="status-value">{user?.signInDetails?.loginId || user?.username}</span>
           </div>
           <div className="status-item">
             <span className="status-label">Environment:</span>
@@ -135,11 +119,10 @@ function App() {
           <h2>Authentication System Implemented</h2>
           <p>The authentication system is now fully configured with:</p>
           <ul>
-            <li>✓ Entra ID integration with AWS Amplify</li>
-            <li>✓ OAuth 2.0 authentication flow</li>
-            <li>✓ Session management service</li>
-            <li>✓ Login and logout components</li>
-            <li>✓ Protected route wrapper</li>
+            <li>✓ Entra ID integration with AWS Cognito</li>
+            <li>✓ OAuth 2.0 / OIDC authentication flow</li>
+            <li>✓ Custom login UI (no Hosted UI)</li>
+            <li>✓ Session management</li>
             <li>✓ User profile display</li>
           </ul>
           <p>Ready to implement Databricks connection (Task 3).</p>

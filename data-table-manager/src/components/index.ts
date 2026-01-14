@@ -11,8 +11,11 @@ export { default as TableView } from './TableView';
 // export { default as DataTable } from './table/DataTable';
 
 // Form components (Task 6)
-// export { default as EntryForm } from './forms/EntryForm';
+export { default as EntryForm } from './EntryForm';
 // export { default as FormField } from './forms/FormField';
+
+// Delete components (Task 7)
+export { default as DeleteConfirmDialog } from './DeleteConfirmDialog';
 
 // Search and filter components (Task 5)
 // export { default as SearchBar } from './search/SearchBar';

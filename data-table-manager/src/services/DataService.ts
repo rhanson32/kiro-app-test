@@ -275,18 +275,87 @@ export class DataService implements IDataService {
   }
 
   async createEntry(data: DataEntryFormData): Promise<DataEntry> {
-    // Implementation will be added in task 6
-    throw new Error('Entry creation implementation pending - will be implemented in task 6');
+    const now = new Date().toISOString();
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const insertQuery = `
+      INSERT INTO ${this.tableName} (
+        id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
+        conversion_factor, ent_hid, test_site, api10, uom, meter_id,
+        is_active, is_deleted, create_user, create_date, change_user, change_date
+      ) VALUES (
+        :id, :scada_tag, :pi_tag, :product_type, :tag_type, :aggregation_type,
+        :conversion_factor, :ent_hid, :test_site, :api10, :uom, :meter_id,
+        true, false, :user, :create_date, :user, :change_date
+      )
+    `;
+    
+    const params = {
+      id,
+      ...data,
+      user: 'system', // TODO: Get from auth context
+      create_date: now,
+      change_date: now
+    };
+    
+    await this.executeQuery(insertQuery, params);
+    
+    // Fetch and return the created entry
+    return this.getEntry(id);
   }
 
   async updateEntry(id: string, data: Partial<DataEntryFormData>): Promise<DataEntry> {
-    // Implementation will be added in task 6
-    throw new Error('Entry update implementation pending - will be implemented in task 6');
+    const now = new Date().toISOString();
+    
+    // Build SET clause dynamically based on provided fields
+    const setFields: string[] = [];
+    const params: Record<string, any> = { id, change_date: now, user: 'system' };
+    
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined) {
+        setFields.push(`${key} = :${key}`);
+        params[key] = value;
+      }
+    });
+    
+    if (setFields.length === 0) {
+      throw new Error('No fields to update');
+    }
+    
+    setFields.push('change_date = :change_date');
+    setFields.push('change_user = :user');
+    
+    const updateQuery = `
+      UPDATE ${this.tableName}
+      SET ${setFields.join(', ')}
+      WHERE id = :id
+    `;
+    
+    await this.executeQuery(updateQuery, params);
+    
+    // Fetch and return the updated entry
+    return this.getEntry(id);
   }
 
   async deleteEntry(id: string): Promise<void> {
-    // Implementation will be added in task 7
-    throw new Error('Entry deletion implementation pending - will be implemented in task 7');
+    const now = new Date().toISOString();
+    
+    // Soft delete - mark as deleted instead of removing from database
+    const deleteQuery = `
+      UPDATE ${this.tableName}
+      SET is_deleted = true,
+          change_date = :change_date,
+          change_user = :user
+      WHERE id = :id
+    `;
+    
+    const params = {
+      id,
+      change_date: now,
+      user: 'system' // TODO: Get from auth context
+    };
+    
+    await this.executeQuery(deleteQuery, params);
   }
 
   async bulkImport(csvData: string): Promise<CSVImportResult> {

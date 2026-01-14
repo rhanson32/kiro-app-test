@@ -3,7 +3,6 @@ import { useAuth } from 'react-oidc-context';
 import { appConfig } from './config';
 import { TableView } from './components/TableView';
 import { DataEntry } from './types/DataEntry';
-import './App.css';
 
 // Custom SSO Login Component
 const SSOLogin: React.FC = () => {
@@ -15,8 +14,8 @@ const SSOLogin: React.FC = () => {
 
   if (auth.isLoading) {
     return (
-      <div className="sso-login-container">
-        <div className="sso-login-card">
+      <div className="flex items-center justify-center min-h-screen bg-teal-800">
+        <div className="bg-white rounded-xl shadow-2xl p-16 max-w-md w-full text-center">
           <p>Loading...</p>
         </div>
       </div>
@@ -25,11 +24,14 @@ const SSOLogin: React.FC = () => {
 
   if (auth.error) {
     return (
-      <div className="sso-login-container">
-        <div className="sso-login-card">
-          <h1>XREF Manager</h1>
-          <p style={{ color: 'red' }}>Error: {auth.error.message}</p>
-          <button className="sso-button" onClick={handleSSOLogin}>
+      <div className="flex items-center justify-center min-h-screen bg-teal-800">
+        <div className="bg-white rounded-xl shadow-2xl p-16 max-w-md w-full text-center">
+          <h1 className="text-3xl font-semibold text-gray-800 mb-3">XREF Manager</h1>
+          <p className="text-red-600">Error: {auth.error.message}</p>
+          <button 
+            className="w-full mt-10 px-6 py-4 bg-teal-800 text-white rounded-lg text-base font-semibold hover:bg-teal-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+            onClick={handleSSOLogin}
+          >
             Try Again
           </button>
         </div>
@@ -38,12 +40,12 @@ const SSOLogin: React.FC = () => {
   }
 
   return (
-    <div className="sso-login-container">
-      <div className="sso-login-card">
-        <h1>XREF Manager</h1>
-        <p className="sso-subtitle">Sign in with your organizational account</p>
+    <div className="flex items-center justify-center min-h-screen bg-teal-800">
+      <div className="bg-white rounded-xl shadow-2xl p-16 max-w-md w-full text-center">
+        <h1 className="text-3xl font-semibold text-gray-800 mb-3">XREF Manager</h1>
+        <p className="text-gray-600 mb-10">Sign in with your organizational account</p>
         <button 
-          className="sso-button"
+          className="w-full px-6 py-4 bg-teal-800 text-white rounded-lg text-base font-semibold hover:bg-teal-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
           onClick={handleSSOLogin}
         >
           Login through SSO
@@ -74,70 +76,31 @@ function App() {
   const userName = auth.user?.profile?.name || userEmail;
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>XREF Manager</h1>
-        <div className="user-profile">
-          <div className="user-info">
-            <div className="user-avatar">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <header className="bg-white px-8 py-5 flex justify-between items-center shadow-sm border-b border-gray-200">
+        <h1 className="text-2xl font-semibold text-gray-800">XREF Manager</h1>
+        <div className="flex items-center gap-5">
+          <div className="relative group">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-xl font-semibold text-white cursor-pointer">
               {userName.charAt(0).toUpperCase()}
             </div>
-            <div className="user-details">
-              <div className="user-email">{userEmail}</div>
+            <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <button 
+                className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                onClick={handleSignOut}
+              >
+                Sign out
+              </button>
             </div>
           </div>
-          <button 
-            className="logout-button"
-            onClick={handleSignOut}
-          >
-            Sign out
-          </button>
         </div>
       </header>
-      <main className="main-content">
+      <main className="flex-1 p-0 m-0 w-full bg-gray-50">
         <TableView
           onEntrySelect={(entry) => setSelectedEntry(entry)}
           onEntryEdit={(entry) => console.log('Edit:', entry)}
           onEntryDelete={(entry) => console.log('Delete:', entry)}
         />
-        
-        <div className="status-panel">
-          <h2>System Status</h2>
-          <div className="status-item">
-            <span className="status-label">Authentication:</span>
-            <span className="status-value success">✓ Connected</span>
-          </div>
-          <div className="status-item">
-            <span className="status-label">Environment:</span>
-            <span className="status-value">{appConfig.environment}</span>
-          </div>
-          <div className="status-item">
-            <span className="status-label">CSV Upload:</span>
-            <span className={`status-value ${appConfig.features.csvUpload ? 'success' : 'disabled'}`}>
-              {appConfig.features.csvUpload ? '✓ Enabled' : '✗ Disabled'}
-            </span>
-          </div>
-          <div className="status-item">
-            <span className="status-label">Bulk Operations:</span>
-            <span className={`status-value ${appConfig.features.bulkOperations ? 'success' : 'disabled'}`}>
-              {appConfig.features.bulkOperations ? '✓ Enabled' : '✗ Disabled'}
-            </span>
-          </div>
-        </div>
-        <div className="info-panel">
-          <h2>XREF Manager - Task 3 Complete! 🚀</h2>
-          <p>The system now includes:</p>
-          <ul>
-            <li>✓ Entra ID integration with AWS Cognito</li>
-            <li>✓ OAuth 2.0 / OIDC authentication flow</li>
-            <li>✓ Custom login UI (no Hosted UI)</li>
-            <li>✓ Session management</li>
-            <li>✓ User profile display</li>
-            <li>✓ Databricks REST API connection service</li>
-            <li>✓ Data validation and transformation utilities</li>
-          </ul>
-          <p><strong>Task 3 deployed successfully!</strong> Databricks connection is ready.</p>
-        </div>
       </main>
     </div>
   );

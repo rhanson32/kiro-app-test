@@ -76,14 +76,14 @@
     - **Property 6: Loading state indication**
     - **Validates: Requirements 2.4**
 
-- [ ] 5. Implement search and filtering functionality
-  - [ ] 5.1 Create search and filter components
+- [x] 5. Implement search and filtering functionality
+  - [x] 5.1 Create search and filter components
     - Build search input component with real-time filtering
     - Implement filter controls for different data fields
     - Add clear filters functionality
     - _Requirements: 3.1, 3.2, 3.4_
   
-  - [ ] 5.2 Integrate search/filter with table view
+  - [x] 5.2 Integrate search/filter with table view
     - Connect search functionality to table data
     - Implement real-time updates and no results handling
     - _Requirements: 3.3, 3.5_
@@ -100,20 +100,20 @@
     - **Property 10: Filter clearing round-trip**
     - **Validates: Requirements 3.4**
 
-- [ ] 6. Build entry form for CRUD operations
-  - [ ] 6.1 Create EntryForm component
+- [x] 6. Build entry form for CRUD operations
+  - [x] 6.1 Create EntryForm component
     - Build modal/slide-out form for data entry
     - Implement form fields for all DataEntry properties
     - Add form validation and error display
     - _Requirements: 4.1, 6.1_
   
-  - [ ] 6.2 Implement create functionality
+  - [x] 6.2 Implement create functionality
     - Connect form to data creation service
     - Handle validation and success/error states
     - Update table view after successful creation
     - _Requirements: 4.2, 4.3_
   
-  - [ ] 6.3 Implement edit functionality
+  - [x] 6.3 Implement edit functionality
     - Populate form with existing data for editing
     - Handle update operations and validation
     - Implement cancel functionality
@@ -131,14 +131,14 @@
     - **Property 20: Valid data updates**
     - **Validates: Requirements 6.2**
 
-- [ ] 7. Implement delete functionality
-  - [ ] 7.1 Create delete confirmation component
+- [x] 7. Implement delete functionality
+  - [x] 7.1 Create delete confirmation component
     - Build confirmation dialog for delete operations
     - Implement delete service integration
     - Handle delete success and error states
     - _Requirements: 7.1, 7.2, 7.3_
   
-  - [ ] 7.2 Integrate delete with table view
+  - [x] 7.2 Integrate delete with table view
     - Add delete buttons/actions to table rows
     - Update table view after successful deletion
     - _Requirements: 7.4, 7.5_

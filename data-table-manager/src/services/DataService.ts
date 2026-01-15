@@ -37,8 +37,10 @@ export class DataService implements IDataService {
     this.databricksConfig = config;
     this.tableName = `${config.catalog}.${config.schema}.${config.table || 'data_entries'}`;
     // Base table for write operations (INSERT, UPDATE, DELETE)
+    const baseCatalog = process.env.REACT_APP_DATABRICKS_BASE_CATALOG || config.catalog;
+    const baseSchema = process.env.REACT_APP_DATABRICKS_BASE_SCHEMA || config.schema;
     const baseTable = process.env.REACT_APP_DATABRICKS_BASE_TABLE || config.table || 'data_entries';
-    this.baseTableName = `${config.catalog}.${config.schema}.${baseTable}`;
+    this.baseTableName = `${baseCatalog}.${baseSchema}.${baseTable}`;
   }
 
   /**

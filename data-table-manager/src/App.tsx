@@ -100,6 +100,7 @@ function App() {
           onEntrySelect={(entry) => setSelectedEntry(entry)}
           onEntryEdit={(entry) => console.log('Edit:', entry)}
           onEntryDelete={(entry) => console.log('Delete:', entry)}
+          userEmail={userEmail}
         />
       </main>
     </div>

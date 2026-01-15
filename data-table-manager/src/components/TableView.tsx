@@ -20,6 +20,7 @@ interface TableViewProps {
   onEntrySelect?: (entry: DataEntry) => void;
   onEntryEdit?: (entry: DataEntry) => void;
   onEntryDelete?: (entry: DataEntry) => void;
+  userEmail?: string;
 }
 
 const columnHelper = createColumnHelper<DataEntry>();
@@ -27,7 +28,8 @@ const columnHelper = createColumnHelper<DataEntry>();
 export const TableView: React.FC<TableViewProps> = ({
   onEntrySelect,
   onEntryEdit,
-  onEntryDelete
+  onEntryDelete,
+  userEmail
 }) => {
   const [entries, setEntries] = useState<DataEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -135,9 +137,9 @@ export const TableView: React.FC<TableViewProps> = ({
       const dataService = getDataService();
       
       if (formMode === 'create') {
-        await dataService.createEntry(data);
+        await dataService.createEntry(data, userEmail);
       } else if (formMode === 'edit' && selectedEntry) {
-        await dataService.updateEntry(selectedEntry.id, data);
+        await dataService.updateEntry(selectedEntry.id, data, userEmail);
       }
       
       // Reload entries after successful create/update
@@ -165,7 +167,7 @@ export const TableView: React.FC<TableViewProps> = ({
     try {
       setIsDeleting(true);
       const dataService = getDataService();
-      await dataService.deleteEntry(entryToDelete.id);
+      await dataService.deleteEntry(entryToDelete.id, userEmail);
       
       // Reload entries after successful deletion
       await loadEntries();
@@ -187,7 +189,7 @@ export const TableView: React.FC<TableViewProps> = ({
   const handleToggleActive = async (entry: DataEntry) => {
     try {
       const dataService = getDataService();
-      await dataService.toggleActive(entry.id, !entry.is_active);
+      await dataService.toggleActive(entry.id, !entry.is_active, userEmail);
       
       // Reload entries after successful toggle
       await loadEntries();
@@ -208,7 +210,7 @@ export const TableView: React.FC<TableViewProps> = ({
       );
       const csvData = [header, ...rows].join('\n');
       
-      const result = await dataService.bulkImport(csvData);
+      const result = await dataService.bulkImport(csvData, userEmail);
       
       console.log('Import result:', result);
       

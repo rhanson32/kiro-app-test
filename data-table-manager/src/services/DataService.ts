@@ -4,18 +4,29 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { DataEntry, DataEntryFormData, CSVImportResult } from '../types/DataEntry';
 import { PaginatedResponse, QueryOptions, DatabricksConfig, DatabricksQueryResult } from '../types/Api';
 
+/**
+ * Generate a UUID v4
+ */
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 export interface IDataService {
   // CRUD operations
   getEntries(options?: QueryOptions): Promise<PaginatedResponse<DataEntry>>;
   getEntry(id: string): Promise<DataEntry>;
-  createEntry(data: DataEntryFormData): Promise<DataEntry>;
-  updateEntry(id: string, data: Partial<DataEntryFormData>): Promise<DataEntry>;
-  deleteEntry(id: string): Promise<void>;
-  toggleActive(id: string, isActive: boolean): Promise<void>;
+  createEntry(data: DataEntryFormData, userEmail?: string): Promise<DataEntry>;
+  updateEntry(id: string, data: Partial<DataEntryFormData>, userEmail?: string): Promise<DataEntry>;
+  deleteEntry(id: string, userEmail?: string): Promise<void>;
+  toggleActive(id: string, isActive: boolean, userEmail?: string): Promise<void>;
   
   // Bulk operations
-  bulkImport(csvData: string): Promise<CSVImportResult>;
-  bulkDelete(ids: string[]): Promise<void>;
+  bulkImport(csvData: string, userEmail?: string): Promise<CSVImportResult>;
+  bulkDelete(ids: string[], userEmail?: string): Promise<void>;
   
   // Search and filter
   searchEntries(query: string, options?: QueryOptions): Promise<PaginatedResponse<DataEntry>>;
@@ -282,9 +293,10 @@ export class DataService implements IDataService {
     return this.transformRowToDataEntry(result.rows[0], result.columns);
   }
 
-  async createEntry(data: DataEntryFormData): Promise<DataEntry> {
+  async createEntry(data: DataEntryFormData, userEmail?: string): Promise<DataEntry> {
     const now = new Date().toISOString();
-    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = generateUUID();
+    const user = userEmail || 'system';
     
     const insertQuery = `
       INSERT INTO ${this.baseTableName} (
@@ -301,7 +313,7 @@ export class DataService implements IDataService {
     const params = {
       id,
       ...data,
-      user: 'system', // TODO: Get from auth context
+      user,
       create_date: now,
       change_date: now
     };
@@ -312,12 +324,13 @@ export class DataService implements IDataService {
     return this.getEntry(id);
   }
 
-  async updateEntry(id: string, data: Partial<DataEntryFormData>): Promise<DataEntry> {
+  async updateEntry(id: string, data: Partial<DataEntryFormData>, userEmail?: string): Promise<DataEntry> {
     const now = new Date().toISOString();
+    const user = userEmail || 'system';
     
     // Build SET clause dynamically based on provided fields
     const setFields: string[] = [];
-    const params: Record<string, any> = { id, change_date: now, user: 'system' };
+    const params: Record<string, any> = { id, change_date: now, user };
     
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -345,8 +358,9 @@ export class DataService implements IDataService {
     return this.getEntry(id);
   }
 
-  async deleteEntry(id: string): Promise<void> {
+  async deleteEntry(id: string, userEmail?: string): Promise<void> {
     const now = new Date().toISOString();
+    const user = userEmail || 'system';
     
     // Soft delete - mark as deleted instead of removing from database
     const deleteQuery = `
@@ -360,14 +374,15 @@ export class DataService implements IDataService {
     const params = {
       id,
       change_date: now,
-      user: 'system' // TODO: Get from auth context
+      user
     };
     
     await this.executeQuery(deleteQuery, params);
   }
 
-  async toggleActive(id: string, isActive: boolean): Promise<void> {
+  async toggleActive(id: string, isActive: boolean, userEmail?: string): Promise<void> {
     const now = new Date().toISOString();
+    const user = userEmail || 'system';
     
     // Toggle is_active status
     const updateQuery = `
@@ -382,7 +397,7 @@ export class DataService implements IDataService {
       id,
       is_active: isActive,
       change_date: now,
-      user: 'system' // TODO: Get from auth context
+      user
     };
     
     await this.executeQuery(updateQuery, params);
@@ -431,9 +446,10 @@ export class DataService implements IDataService {
     return tplnrToEntHidMap;
   }
 
-  async bulkImport(csvData: string): Promise<CSVImportResult> {
+  async bulkImport(csvData: string, userEmail?: string): Promise<CSVImportResult> {
     const now = new Date().toISOString();
     const importId = `import-${Date.now()}`;
+    const user = userEmail || 'system';
     
     // Parse CSV data
     const lines = csvData.split('\n').filter(line => line.trim());
@@ -552,7 +568,7 @@ export class DataService implements IDataService {
       const valuesClauses: string[] = [];
       
       for (const row of validatedRows) {
-        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const id = generateUUID();
         
         // Escape single quotes in string values
         const escapeValue = (val: any) => {
@@ -568,18 +584,17 @@ export class DataService implements IDataService {
           ${escapeValue(row.product_type || '')},
           ${escapeValue(row.tag_type || '')},
           ${escapeValue(row.aggregation_type || '')},
-          ${row.conversion_factor || 0},
+          ${row.conversion_factor || 1},
           ${row.ent_hid},
-          ${escapeValue(row.tplnr || '')},
           ${escapeValue(row.test_site || '')},
           ${escapeValue(row.api10 || '')},
           ${escapeValue(row.uom || '')},
           ${escapeValue(row.meter_id || '')},
           true,
           false,
-          'system',
+          ${escapeValue(user)},
           ${escapeValue(now)},
-          'system',
+          ${escapeValue(user)},
           ${escapeValue(now)}
         )`;
         
@@ -590,7 +605,7 @@ export class DataService implements IDataService {
       const insertQuery = `
         INSERT INTO ${this.baseTableName} (
           id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
-          conversion_factor, ent_hid, tplnr, test_site, api10, uom, meter_id,
+          conversion_factor, ent_hid, test_site, api10, uom, meter_id,
           is_active, is_deleted, create_user, create_date, change_user, change_date
         ) VALUES
         ${valuesClauses.join(',\n')}

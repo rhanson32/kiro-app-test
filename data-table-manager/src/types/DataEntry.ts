@@ -9,6 +9,9 @@ export interface DataEntry {
   aggregation_type: string;
   conversion_factor: number;
   ent_hid: number;
+  entname: string;
+  tplnr: string;
+  asset_team: string;
   is_active: boolean;
   is_deleted: boolean;
   create_user: string;

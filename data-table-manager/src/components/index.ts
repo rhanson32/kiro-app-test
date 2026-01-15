@@ -22,7 +22,7 @@ export { default as DeleteConfirmDialog } from './DeleteConfirmDialog';
 // export { default as FilterPanel } from './search/FilterPanel';
 
 // Upload components (Task 8)
-// export { default as CSVUpload } from './upload/CSVUpload';
+export { CSVUpload } from './CSVUpload';
 // export { default as FileUpload } from './upload/FileUpload';
 
 // Common components

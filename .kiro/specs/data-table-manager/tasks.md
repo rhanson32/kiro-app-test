@@ -151,14 +151,14 @@
     - **Property 25: Delete execution**
     - **Validates: Requirements 7.2**
 
-- [ ] 8. Build CSV upload and bulk import functionality
-  - [ ] 8.1 Create CSVUpload component
+- [x] 8. Build CSV upload and bulk import functionality
+  - [x] 8.1 Create CSVUpload component
     - Build file selection and drag-drop interface
     - Implement CSV parsing and validation
     - Create data preview functionality
     - _Requirements: 5.1, 5.2_
   
-  - [ ] 8.2 Implement bulk import processing
+  - [x] 8.2 Implement bulk import processing
     - Create bulk import service
     - Handle validation errors and success reporting
     - Update table view after successful import

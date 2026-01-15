@@ -11,6 +11,7 @@ export interface IDataService {
   createEntry(data: DataEntryFormData): Promise<DataEntry>;
   updateEntry(id: string, data: Partial<DataEntryFormData>): Promise<DataEntry>;
   deleteEntry(id: string): Promise<void>;
+  toggleActive(id: string, isActive: boolean): Promise<void>;
   
   // Bulk operations
   bulkImport(csvData: string): Promise<CSVImportResult>;
@@ -240,9 +241,10 @@ export class DataService implements IDataService {
       params.search = `%${options.search}%`;
     }
 
-    // Get all data (no pagination since we're loading everything)
+    // Get only the specific columns we need
     const dataQuery = `
-      SELECT * FROM ${this.tableName}
+      SELECT pi_tag, scada_tag, product_type, tag_type, aggregation_type, ent_hid, entname, tplnr, asset_team, is_active, id
+      FROM ${this.tableName}
       ${whereClause}
       ORDER BY ${sortBy} ${sortOrder}
       LIMIT ${pageSize}
@@ -358,9 +360,116 @@ export class DataService implements IDataService {
     await this.executeQuery(deleteQuery, params);
   }
 
+  async toggleActive(id: string, isActive: boolean): Promise<void> {
+    const now = new Date().toISOString();
+    
+    // Toggle is_active status
+    const updateQuery = `
+      UPDATE ${this.tableName}
+      SET is_active = :is_active,
+          change_date = :change_date,
+          change_user = :user
+      WHERE id = :id
+    `;
+    
+    const params = {
+      id,
+      is_active: isActive,
+      change_date: now,
+      user: 'system' // TODO: Get from auth context
+    };
+    
+    await this.executeQuery(updateQuery, params);
+  }
+
   async bulkImport(csvData: string): Promise<CSVImportResult> {
-    // Implementation will be added in task 8
-    throw new Error('Bulk import implementation pending - will be implemented in task 8');
+    const now = new Date().toISOString();
+    const importId = `import-${Date.now()}`;
+    
+    // Parse CSV data
+    const lines = csvData.split('\n').filter(line => line.trim());
+    if (lines.length === 0) {
+      throw new Error('CSV data is empty');
+    }
+
+    const totalRows = lines.length - 1; // Exclude header
+    let successfulImports = 0;
+    let failedImports = 0;
+    const errors: any[] = [];
+
+    // Parse header
+    const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+    // Process each row
+    for (let i = 1; i < lines.length; i++) {
+      try {
+        const values = lines[i].split(',').map(v => v.trim());
+        const row: any = {};
+
+        header.forEach((col, index) => {
+          const value = values[index];
+          if (col === 'conversion_factor') {
+            row[col] = parseFloat(value) || 0;
+          } else if (col === 'ent_hid') {
+            row[col] = parseInt(value, 10) || 0;
+          } else {
+            row[col] = value;
+          }
+        });
+
+        // Create entry
+        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const insertQuery = `
+          INSERT INTO ${this.tableName} (
+            id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
+            conversion_factor, ent_hid, test_site, api10, uom, meter_id,
+            is_active, is_deleted, create_user, create_date, change_user, change_date
+          ) VALUES (
+            :id, :scada_tag, :pi_tag, :product_type, :tag_type, :aggregation_type,
+            :conversion_factor, :ent_hid, :test_site, :api10, :uom, :meter_id,
+            true, false, :user, :create_date, :user, :change_date
+          )
+        `;
+
+        const params = {
+          id,
+          scada_tag: row.scada_tag || '',
+          pi_tag: row.pi_tag || '',
+          product_type: row.product_type || '',
+          tag_type: row.tag_type || '',
+          aggregation_type: row.aggregation_type || '',
+          conversion_factor: row.conversion_factor || 0,
+          ent_hid: row.ent_hid || 0,
+          test_site: row.test_site || '',
+          api10: row.api10 || '',
+          uom: row.uom || '',
+          meter_id: row.meter_id || '',
+          user: 'system',
+          create_date: now,
+          change_date: now
+        };
+
+        await this.executeQuery(insertQuery, params);
+        successfulImports++;
+      } catch (error) {
+        failedImports++;
+        errors.push({
+          row: i,
+          field: 'general',
+          value: lines[i],
+          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return {
+      totalRows,
+      successfulImports,
+      failedImports,
+      errors,
+      importId,
+      timestamp: new Date()
+    };
   }
 
   async bulkDelete(ids: string[]): Promise<void> {

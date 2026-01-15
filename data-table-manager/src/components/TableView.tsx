@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -14,6 +14,7 @@ import { getDataService } from '../services/DataService';
 import { formatDateTime, formatNumber } from '../utils/formatting';
 import { EntryForm } from './EntryForm';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
+import { CSVUpload } from './CSVUpload';
 
 interface TableViewProps {
   onEntrySelect?: (entry: DataEntry) => void;
@@ -41,10 +42,25 @@ export const TableView: React.FC<TableViewProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [entryToDelete, setEntryToDelete] = useState<DataEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [assetTeamFilter, setAssetTeamFilter] = useState<string>('All');
+  const [productTypeFilter, setProductTypeFilter] = useState<string>('All');
+  const [tagTypeFilter, setTagTypeFilter] = useState<string>('All');
+  const [activeFilter, setActiveFilter] = useState<string>('All');
+  const [isCSVUploadOpen, setIsCSVUploadOpen] = useState<boolean>(false);
+  const [searchInput, setSearchInput] = useState<string>(''); // Local search input for debouncing
 
   useEffect(() => {
     testConnectionFirst();
   }, []);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGlobalFilter(searchInput);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const testConnectionFirst = async () => {
     try {
@@ -165,74 +181,159 @@ export const TableView: React.FC<TableViewProps> = ({
     setEntryToDelete(null);
   };
 
+  const handleToggleActive = async (entry: DataEntry) => {
+    try {
+      const dataService = getDataService();
+      await dataService.toggleActive(entry.id, !entry.is_active);
+      
+      // Reload entries after successful toggle
+      await loadEntries();
+    } catch (err) {
+      console.error('Toggle active error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to toggle active status');
+    }
+  };
+
+  const handleCSVImport = async (data: DataEntryFormData[]) => {
+    try {
+      const dataService = getDataService();
+      
+      // Convert data to CSV format for bulk import
+      const header = 'scada_tag,pi_tag,product_type,tag_type,aggregation_type,conversion_factor,ent_hid,test_site,api10,uom,meter_id';
+      const rows = data.map(entry => 
+        `${entry.scada_tag},${entry.pi_tag},${entry.product_type},${entry.tag_type},${entry.aggregation_type},${entry.conversion_factor || 0},${entry.ent_hid || 0},${entry.test_site || ''},${entry.api10 || ''},${entry.uom || ''},${entry.meter_id || ''}`
+      );
+      const csvData = [header, ...rows].join('\n');
+      
+      const result = await dataService.bulkImport(csvData);
+      
+      console.log('Import result:', result);
+      
+      // Reload entries after successful import
+      await loadEntries();
+      
+      // Show success message
+      if (result.failedImports > 0) {
+        setError(`Import completed with ${result.successfulImports} successful and ${result.failedImports} failed imports`);
+      }
+    } catch (err) {
+      console.error('CSV import error:', err);
+      throw err; // Re-throw to let CSVUpload handle the error
+    }
+  };
+
+  // Get unique values for dropdowns
+  const uniqueAssetTeams = useMemo(() => {
+    const teams = new Set(entries.map(entry => entry.asset_team).filter(Boolean));
+    return ['All', ...Array.from(teams).sort()];
+  }, [entries]);
+
+  const uniqueProductTypes = useMemo(() => {
+    const types = new Set(entries.map(entry => entry.product_type).filter(Boolean));
+    return ['All', ...Array.from(types).sort()];
+  }, [entries]);
+
+  const uniqueTagTypes = useMemo(() => {
+    const types = new Set(entries.map(entry => entry.tag_type).filter(Boolean));
+    return ['All', ...Array.from(types).sort()];
+  }, [entries]);
+
+  // Filter entries based on all filter selections
+  const filteredEntries = useMemo(() => {
+    return entries.filter(entry => {
+      if (assetTeamFilter !== 'All' && entry.asset_team !== assetTeamFilter) return false;
+      if (productTypeFilter !== 'All' && entry.product_type !== productTypeFilter) return false;
+      if (tagTypeFilter !== 'All' && entry.tag_type !== tagTypeFilter) return false;
+      if (activeFilter === 'Active' && !entry.is_active) return false;
+      if (activeFilter === 'Inactive' && entry.is_active) return false;
+      return true;
+    });
+  }, [entries, assetTeamFilter, productTypeFilter, tagTypeFilter, activeFilter]);
+
+  // Custom global filter function that includes entname and tplnr
+  const globalFilterFn = useCallback((row: any, columnId: string, filterValue: string) => {
+    if (!filterValue) return true;
+    
+    const searchLower = filterValue.toLowerCase();
+    const entry = row.original as DataEntry;
+    
+    // Search across all relevant fields including entname and tplnr
+    const searchableFields = [
+      entry.pi_tag,
+      entry.scada_tag,
+      entry.product_type,
+      entry.tag_type,
+      entry.aggregation_type,
+      entry.entname,
+      entry.tplnr,
+      entry.asset_team,
+      entry.ent_hid?.toString()
+    ];
+    
+    return searchableFields.some(field => 
+      field?.toString().toLowerCase().includes(searchLower)
+    );
+  }, []);
+
   const columns = useMemo(
     () => [
-      columnHelper.accessor('scada_tag', {
-        header: 'SCADA Tag',
-        cell: info => info.getValue() || '-',
-        size: 150,
-      }),
       columnHelper.accessor('pi_tag', {
         header: 'PI Tag',
         cell: info => info.getValue() || '-',
-        size: 150,
+        size: 200,
+      }),
+      columnHelper.accessor('scada_tag', {
+        header: 'SCADA Tag',
+        cell: info => info.getValue() || '-',
+        size: 200,
       }),
       columnHelper.accessor('product_type', {
         header: 'Product Type',
         cell: info => info.getValue() || '-',
-        size: 120,
+        size: 150,
       }),
       columnHelper.accessor('tag_type', {
         header: 'Tag Type',
         cell: info => info.getValue() || '-',
-        size: 100,
+        size: 150,
       }),
       columnHelper.accessor('aggregation_type', {
         header: 'Aggregation',
         cell: info => info.getValue() || '-',
-        size: 110,
-      }),
-      columnHelper.accessor('conversion_factor', {
-        header: 'Conversion Factor',
-        cell: info => formatNumber(info.getValue(), 4),
-        size: 130,
+        size: 150,
       }),
       columnHelper.accessor('ent_hid', {
         header: 'Entity HID',
         cell: info => info.getValue() || '-',
-        size: 100,
+        size: 120,
       }),
-      columnHelper.accessor('uom', {
-        header: 'UOM',
+      columnHelper.accessor('entname', {
+        header: 'Entity Name',
         cell: info => info.getValue() || '-',
-        size: 80,
+        size: 180,
       }),
-      columnHelper.accessor('test_site', {
-        header: 'Test Site',
+      columnHelper.accessor('tplnr', {
+        header: 'TPLNR',
         cell: info => info.getValue() || '-',
-        size: 100,
+        size: 120,
+      }),
+      columnHelper.accessor('asset_team', {
+        header: 'Asset Team',
+        cell: info => info.getValue() || '-',
+        size: 150,
       }),
       columnHelper.accessor('is_active', {
         header: 'Status',
-        cell: info => {
-          const row = info.row.original;
-          const isDeleted = !!(row.is_deleted);
-          const value = info.getValue();
-          const isActive = value === undefined ? true : !!(value);
-          const status = isDeleted ? 'Deleted' : isActive ? 'Active' : 'Inactive';
-          const badgeClass = isDeleted 
-            ? 'bg-red-100 text-red-800' 
-            : isActive 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800';
-          return <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase ${badgeClass}`}>{status}</span>;
-        },
-        size: 90,
-      }),
-      columnHelper.accessor('create_date', {
-        header: 'Created',
-        cell: info => formatDateTime(info.getValue()),
-        size: 140,
+        cell: info => (
+          <span className={`px-2 py-1 rounded text-xs font-medium ${
+            info.getValue() 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {info.getValue() ? 'Active' : 'Inactive'}
+          </span>
+        ),
+        size: 100,
       }),
       columnHelper.display({
         id: 'actions',
@@ -240,7 +341,21 @@ export const TableView: React.FC<TableViewProps> = ({
         cell: info => (
           <div className="flex gap-2">
             <button
-              className="bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded hover:bg-gray-200 hover:bg-blue-50 transition-colors"
+              className={`bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded transition-colors ${
+                info.row.original.is_active 
+                  ? 'hover:bg-green-50' 
+                  : 'hover:bg-yellow-50'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleActive(info.row.original);
+              }}
+              title={info.row.original.is_active ? 'Deactivate' : 'Activate'}
+            >
+              {info.row.original.is_active ? '✅' : '⏸️'}
+            </button>
+            <button
+              className="bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded hover:bg-blue-50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 handleEdit(info.row.original);
@@ -250,7 +365,7 @@ export const TableView: React.FC<TableViewProps> = ({
               ✏️
             </button>
             <button
-              className="bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded hover:bg-gray-200 hover:bg-red-50 transition-colors"
+              className="bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded hover:bg-red-50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteClick(info.row.original);
@@ -261,14 +376,14 @@ export const TableView: React.FC<TableViewProps> = ({
             </button>
           </div>
         ),
-        size: 100,
+        size: 120,
       }),
     ],
     []
   );
 
   const table = useReactTable({
-    data: entries,
+    data: filteredEntries,
     columns,
     state: {
       sorting,
@@ -278,6 +393,7 @@ export const TableView: React.FC<TableViewProps> = ({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: globalFilterFn as any,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -323,40 +439,126 @@ export const TableView: React.FC<TableViewProps> = ({
 
   return (
     <div className="w-full p-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-5 flex-wrap gap-4 bg-white px-6 py-5 rounded-lg shadow-sm">
-        <h2 className="m-0 text-gray-800 text-2xl font-semibold">Data Entries</h2>
-        <div className="flex items-center gap-2 flex-1 max-w-2xl">
-          <input
-            type="text"
-            placeholder="Search all columns..."
-            value={globalFilter ?? ''}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all"
-          />
-          {globalFilter && (
-            <button
-              onClick={() => setGlobalFilter('')}
-              className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md cursor-pointer text-base text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-all"
-              title="Clear search"
-            >
-              ✕
-            </button>
-          )}
-          <button
-            onClick={handleCreateNew}
-            className="px-4 py-2 bg-primary text-white rounded-md cursor-pointer text-sm font-medium hover:bg-primary-hover transition-all whitespace-nowrap"
-            title="Create new entry"
-          >
-            + New Entry
-          </button>
+      <div className="bg-white px-6 py-5 rounded-lg shadow-sm mb-5">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="m-0 text-gray-800 text-2xl font-semibold">Data Entries</h2>
+          <div className="text-gray-600 text-sm whitespace-nowrap">
+            Showing {table.getFilteredRowModel().rows.length} of {entries.length} entries
+          </div>
         </div>
-        <div className="text-gray-600 text-sm whitespace-nowrap">
-          Showing {table.getFilteredRowModel().rows.length} of {entries.length} entries
+        
+        <div className="flex justify-between items-center gap-4 flex-wrap">
+          {/* Filters on the left */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label htmlFor="asset-team-filter" className="text-sm text-gray-700 font-medium whitespace-nowrap">
+                Asset Team:
+              </label>
+              <select
+                id="asset-team-filter"
+                value={assetTeamFilter}
+                onChange={(e) => setAssetTeamFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
+              >
+                {uniqueAssetTeams.map(team => (
+                  <option key={team} value={team}>
+                    {team}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="product-type-filter" className="text-sm text-gray-700 font-medium whitespace-nowrap">
+                Product Type:
+              </label>
+              <select
+                id="product-type-filter"
+                value={productTypeFilter}
+                onChange={(e) => setProductTypeFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
+              >
+                {uniqueProductTypes.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="tag-type-filter" className="text-sm text-gray-700 font-medium whitespace-nowrap">
+                Tag Type:
+              </label>
+              <select
+                id="tag-type-filter"
+                value={tagTypeFilter}
+                onChange={(e) => setTagTypeFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
+              >
+                {uniqueTagTypes.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="active-filter" className="text-sm text-gray-700 font-medium whitespace-nowrap">
+                Status:
+              </label>
+              <select
+                id="active-filter"
+                value={activeFilter}
+                onChange={(e) => setActiveFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
+              >
+                <option value="All">All</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Search and New Entry on the right */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search all columns..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all w-64"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md cursor-pointer text-base text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-all"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+            <button
+              onClick={() => setIsCSVUploadOpen(true)}
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md cursor-pointer text-sm font-medium hover:bg-gray-50 transition-all whitespace-nowrap"
+              title="Import CSV"
+            >
+              📤 Import CSV
+            </button>
+            <button
+              onClick={handleCreateNew}
+              className="px-4 py-2 bg-primary text-white rounded-md cursor-pointer text-sm font-medium hover:bg-primary-hover transition-all whitespace-nowrap"
+              title="Create new entry"
+            >
+              + New Entry
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="h-[calc(100vh-200px)] overflow-y-auto overflow-x-auto bg-white rounded-lg shadow-md relative">
-        <table className="w-full border-collapse min-w-[1200px]">
+        <table className="w-full border-collapse table-fixed">
           <thead className="bg-gray-50 border-b-2 border-gray-300 sticky top-0 z-10">
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
@@ -364,7 +566,7 @@ export const TableView: React.FC<TableViewProps> = ({
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="px-3 py-2 text-left font-semibold text-gray-700 text-sm uppercase tracking-wide bg-gray-50 select-none cursor-pointer"
+                    className="px-2 py-1.5 text-left font-semibold text-gray-700 text-xs uppercase tracking-wide bg-gray-50 select-none cursor-pointer"
                   >
                     <div className="flex items-center gap-1">
                       {flexRender(
@@ -385,22 +587,15 @@ export const TableView: React.FC<TableViewProps> = ({
           <tbody>
             {table.getRowModel().rows.map(row => {
               const entry = row.original;
-              const isDeleted = !!(entry.is_deleted);
-              const isActive = entry.is_active === undefined ? true : !!(entry.is_active);
-              const rowClass = isDeleted 
-                ? 'bg-red-50 opacity-60' 
-                : isActive 
-                ? 'bg-white' 
-                : 'bg-white opacity-85';
               
               return (
                 <tr
                   key={row.id}
                   onClick={() => onEntrySelect?.(entry)}
-                  className={`border-b border-gray-300 hover:bg-gray-50 cursor-pointer transition-colors ${rowClass}`}
+                  className="border-b border-gray-300 hover:bg-gray-50 cursor-pointer transition-colors bg-white"
                 >
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="px-3 py-1.5 text-sm text-gray-800">
+                    <td key={cell.id} className="px-2 py-1 text-xs text-gray-800 truncate overflow-hidden whitespace-nowrap">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -425,6 +620,12 @@ export const TableView: React.FC<TableViewProps> = ({
         onConfirm={handleDeleteConfirm}
         entryName={entryToDelete?.scada_tag || entryToDelete?.pi_tag}
         isDeleting={isDeleting}
+      />
+
+      <CSVUpload
+        isOpen={isCSVUploadOpen}
+        onClose={() => setIsCSVUploadOpen(false)}
+        onImport={handleCSVImport}
       />
     </div>
   );

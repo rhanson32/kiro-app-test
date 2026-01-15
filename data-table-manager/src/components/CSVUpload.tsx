@@ -73,7 +73,7 @@ export const CSVUpload: React.FC<CSVUploadProps> = ({ isOpen, onClose, onImport 
     const header = lines[0].split(',').map(h => h.trim().toLowerCase());
     
     // Expected columns
-    const requiredColumns = ['scada_tag', 'pi_tag', 'product_type', 'tag_type', 'aggregation_type', 'ent_hid'];
+    const requiredColumns = ['scada_tag', 'pi_tag', 'product_type', 'tag_type', 'aggregation_type', 'tplnr'];
     const optionalColumns = ['conversion_factor', 'test_site', 'api10', 'uom', 'meter_id'];
     
     // Validate header
@@ -208,9 +208,12 @@ export const CSVUpload: React.FC<CSVUploadProps> = ({ isOpen, onClose, onImport 
               />
               <div className="mt-6 text-xs text-gray-500">
                 <p className="font-semibold mb-2">Required columns:</p>
-                <p>scada_tag, pi_tag, product_type, tag_type, aggregation_type, ent_hid</p>
+                <p>scada_tag, pi_tag, product_type, tag_type, aggregation_type, tplnr</p>
                 <p className="font-semibold mt-3 mb-2">Optional columns:</p>
                 <p>conversion_factor, test_site, api10, uom, meter_id</p>
+                <p className="text-xs text-gray-400 mt-3">
+                  Note: ent_hid will be automatically looked up from tplnr
+                </p>
               </div>
             </div>
           ) : (

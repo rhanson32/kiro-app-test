@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useDeferredValue } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -48,6 +48,9 @@ export const TableView: React.FC<TableViewProps> = ({
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const [isCSVUploadOpen, setIsCSVUploadOpen] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>(''); // Local search input for debouncing
+  
+  // Use deferred value for search to prevent blocking UI
+  const deferredSearchInput = useDeferredValue(searchInput);
 
   useEffect(() => {
     testConnectionFirst();
@@ -56,11 +59,11 @@ export const TableView: React.FC<TableViewProps> = ({
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      setGlobalFilter(searchInput);
+      setGlobalFilter(deferredSearchInput);
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [deferredSearchInput]);
 
   const testConnectionFirst = async () => {
     try {
@@ -275,6 +278,19 @@ export const TableView: React.FC<TableViewProps> = ({
     );
   }, []);
 
+  // Memoize handlers to prevent column re-creation
+  const handleToggleActiveCallback = useCallback((entry: DataEntry) => {
+    handleToggleActive(entry);
+  }, []);
+
+  const handleEditCallback = useCallback((entry: DataEntry) => {
+    handleEdit(entry);
+  }, []);
+
+  const handleDeleteClickCallback = useCallback((entry: DataEntry) => {
+    handleDeleteClick(entry);
+  }, []);
+
   const columns = useMemo(
     () => [
       columnHelper.accessor('pi_tag', {
@@ -348,7 +364,7 @@ export const TableView: React.FC<TableViewProps> = ({
               }`}
               onClick={(e) => {
                 e.stopPropagation();
-                handleToggleActive(info.row.original);
+                handleToggleActiveCallback(info.row.original);
               }}
               title={info.row.original.is_active ? 'Deactivate' : 'Activate'}
             >
@@ -358,7 +374,7 @@ export const TableView: React.FC<TableViewProps> = ({
               className="bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded hover:bg-blue-50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                handleEdit(info.row.original);
+                handleEditCallback(info.row.original);
               }}
               title="Edit"
             >
@@ -368,7 +384,7 @@ export const TableView: React.FC<TableViewProps> = ({
               className="bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded hover:bg-red-50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                handleDeleteClick(info.row.original);
+                handleDeleteClickCallback(info.row.original);
               }}
               title="Delete"
             >
@@ -379,7 +395,7 @@ export const TableView: React.FC<TableViewProps> = ({
         size: 120,
       }),
     ],
-    []
+    [handleToggleActiveCallback, handleEditCallback, handleDeleteClickCallback]
   );
 
   const table = useReactTable({

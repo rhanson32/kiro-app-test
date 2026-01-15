@@ -404,6 +404,41 @@ export class DataService implements IDataService {
     // Parse header
     const header = lines[0].split(',').map(h => h.trim().toLowerCase());
 
+    // Build a map of tplnr -> ent_hid by querying the lookup table once
+    const tplnrValues = new Set<string>();
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      const tplnrIndex = header.indexOf('tplnr');
+      if (tplnrIndex >= 0 && values[tplnrIndex]) {
+        tplnrValues.add(values[tplnrIndex]);
+      }
+    }
+
+    // Lookup ent_hid values for all tplnr values in one query
+    const tplnrToEntHidMap = new Map<string, number>();
+    if (tplnrValues.size > 0) {
+      try {
+        const tplnrList = Array.from(tplnrValues).map(t => `'${t}'`).join(',');
+        const lookupQuery = `
+          SELECT tplnr, ent_hid, entname
+          FROM operations.fdc.vw_cfentity
+          WHERE tplnr IN (${tplnrList})
+        `;
+        const lookupResult = await this.executeQuery(lookupQuery);
+        
+        lookupResult.rows.forEach(row => {
+          const tplnr = row[0];
+          const ent_hid = row[1];
+          if (tplnr && ent_hid) {
+            tplnrToEntHidMap.set(tplnr, ent_hid);
+          }
+        });
+      } catch (error) {
+        console.error('Error looking up ent_hid values:', error);
+        throw new Error('Failed to lookup entity IDs from tplnr values');
+      }
+    }
+
     // Process each row
     for (let i = 1; i < lines.length; i++) {
       try {
@@ -414,23 +449,38 @@ export class DataService implements IDataService {
           const value = values[index];
           if (col === 'conversion_factor') {
             row[col] = parseFloat(value) || 0;
-          } else if (col === 'ent_hid') {
-            row[col] = parseInt(value, 10) || 0;
           } else {
             row[col] = value;
           }
         });
+
+        // Always lookup ent_hid from tplnr
+        if (row.tplnr) {
+          const lookedUpEntHid = tplnrToEntHidMap.get(row.tplnr);
+          if (lookedUpEntHid) {
+            row.ent_hid = lookedUpEntHid;
+          } else {
+            throw new Error(`No ent_hid found for tplnr: ${row.tplnr}`);
+          }
+        } else {
+          throw new Error('tplnr is required');
+        }
+
+        // Validate required fields
+        if (!row.ent_hid) {
+          throw new Error('ent_hid could not be determined from tplnr');
+        }
 
         // Create entry
         const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const insertQuery = `
           INSERT INTO ${this.baseTableName} (
             id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
-            conversion_factor, ent_hid, test_site, api10, uom, meter_id,
+            conversion_factor, ent_hid, tplnr, test_site, api10, uom, meter_id,
             is_active, is_deleted, create_user, create_date, change_user, change_date
           ) VALUES (
             :id, :scada_tag, :pi_tag, :product_type, :tag_type, :aggregation_type,
-            :conversion_factor, :ent_hid, :test_site, :api10, :uom, :meter_id,
+            :conversion_factor, :ent_hid, :tplnr, :test_site, :api10, :uom, :meter_id,
             true, false, :user, :create_date, :user, :change_date
           )
         `;
@@ -443,7 +493,8 @@ export class DataService implements IDataService {
           tag_type: row.tag_type || '',
           aggregation_type: row.aggregation_type || '',
           conversion_factor: row.conversion_factor || 0,
-          ent_hid: row.ent_hid || 0,
+          ent_hid: row.ent_hid,
+          tplnr: row.tplnr || '',
           test_site: row.test_site || '',
           api10: row.api10 || '',
           uom: row.uom || '',

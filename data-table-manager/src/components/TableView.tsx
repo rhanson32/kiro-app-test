@@ -97,7 +97,7 @@ export const TableView: React.FC<TableViewProps> = ({
       const dataService = getDataService();
       const result = await dataService.getEntries({
         page: 1,
-        pageSize: 10000,
+        pageSize: 999999,
         sortBy: 'create_date',
         sortOrder: 'desc'
       });

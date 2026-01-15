@@ -394,24 +394,36 @@ export class DataService implements IDataService {
     }
 
     try {
-      const tplnrList = tplnrValues.map(t => `'${t}'`).join(',');
+      // Trim tplnr values to handle hidden spaces
+      const trimmedTplnrValues = tplnrValues.map(t => t.trim());
+      const tplnrList = trimmedTplnrValues.map(t => `'${t}'`).join(',');
       const lookupQuery = `
-        SELECT tplnr, ent_hid
+        SELECT TRIM(entcode) as tplnr, ent_hid
         FROM operations.fdc.vw_cfentity
-        WHERE tplnr IN (${tplnrList})
+        WHERE TRIM(entcode) IN (${tplnrList})
       `;
+      
+      console.log('Executing tplnr lookup query:', lookupQuery);
       const lookupResult = await this.executeQuery(lookupQuery);
+      console.log(`Lookup found ${lookupResult.rows.length} matches out of ${tplnrValues.length} tplnr values`);
       
       lookupResult.rows.forEach(row => {
         const tplnr = row[0];
         const ent_hid = row[1];
         if (tplnr && ent_hid) {
-          tplnrToEntHidMap.set(tplnr, ent_hid);
+          tplnrToEntHidMap.set(tplnr.trim(), ent_hid);
         }
       });
+      
+      // Log which tplnr values were not found
+      const notFound = trimmedTplnrValues.filter(t => !tplnrToEntHidMap.has(t));
+      if (notFound.length > 0) {
+        console.warn(`No ent_hid found for ${notFound.length} tplnr values:`, notFound);
+      }
     } catch (error) {
       console.error('Error looking up ent_hid values:', error);
-      throw new Error('Failed to lookup entity IDs from tplnr values');
+      console.error('Error details:', error instanceof Error ? error.message : error);
+      throw new Error(`Failed to lookup entity IDs from tplnr values: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
     return tplnrToEntHidMap;
@@ -447,11 +459,11 @@ export class DataService implements IDataService {
     const tplnrToEntHidMap = new Map<string, number>();
     if (tplnrValues.size > 0) {
       try {
-        const tplnrList = Array.from(tplnrValues).map(t => `'${t}'`).join(',');
+        const tplnrList = Array.from(tplnrValues).map(t => `'${t.trim()}'`).join(',');
         const lookupQuery = `
-          SELECT tplnr, ent_hid, entname
+          SELECT TRIM(entcode) as tplnr, ent_hid
           FROM operations.fdc.vw_cfentity
-          WHERE tplnr IN (${tplnrList})
+          WHERE TRIM(entcode) IN (${tplnrList})
         `;
         const lookupResult = await this.executeQuery(lookupQuery);
         
@@ -459,7 +471,7 @@ export class DataService implements IDataService {
           const tplnr = row[0];
           const ent_hid = row[1];
           if (tplnr && ent_hid) {
-            tplnrToEntHidMap.set(tplnr, ent_hid);
+            tplnrToEntHidMap.set(tplnr.trim(), ent_hid);
           }
         });
       } catch (error) {
@@ -486,11 +498,12 @@ export class DataService implements IDataService {
 
         // Always lookup ent_hid from tplnr
         if (row.tplnr) {
-          const lookedUpEntHid = tplnrToEntHidMap.get(row.tplnr);
+          const trimmedTplnr = row.tplnr.trim();
+          const lookedUpEntHid = tplnrToEntHidMap.get(trimmedTplnr);
           if (lookedUpEntHid) {
             row.ent_hid = lookedUpEntHid;
           } else {
-            throw new Error(`No ent_hid found for tplnr: ${row.tplnr}`);
+            throw new Error(`No ent_hid found for tplnr: ${trimmedTplnr}`);
           }
         } else {
           throw new Error('tplnr is required');

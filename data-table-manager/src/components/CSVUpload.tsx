@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { DataEntryFormData } from '../types/DataEntry';
+import { getDataService } from '../services/DataService';
 
 interface CSVUploadProps {
   isOpen: boolean;
@@ -56,14 +57,14 @@ export const CSVUpload: React.FC<CSVUploadProps> = ({ isOpen, onClose, onImport 
     
     try {
       const text = await selectedFile.text();
-      const parsed = parseCSV(text);
+      const parsed = await parseCSV(text);
       setParsedData(parsed);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse CSV file');
     }
   };
 
-  const parseCSV = (text: string): ParsedRow[] => {
+  const parseCSV = async (text: string): Promise<ParsedRow[]> => {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length === 0) {
       throw new Error('CSV file is empty');
@@ -81,6 +82,20 @@ export const CSVUpload: React.FC<CSVUploadProps> = ({ isOpen, onClose, onImport 
     if (missingRequired.length > 0) {
       throw new Error(`Missing required columns: ${missingRequired.join(', ')}`);
     }
+
+    // Collect all tplnr values for lookup
+    const tplnrValues: string[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      const tplnrIndex = header.indexOf('tplnr');
+      if (tplnrIndex >= 0 && values[tplnrIndex]) {
+        tplnrValues.push(values[tplnrIndex]);
+      }
+    }
+
+    // Lookup ent_hid for all tplnr values
+    const dataService = getDataService();
+    const tplnrToEntHidMap = await dataService.lookupEntHidFromTplnr(tplnrValues);
 
     // Parse data rows
     const parsed: ParsedRow[] = [];
@@ -110,6 +125,17 @@ export const CSVUpload: React.FC<CSVUploadProps> = ({ isOpen, onClose, onImport 
             row.ent_hid = num;
           } else if (value) {
             errors.push(`Invalid ent_hid: ${value}`);
+          }
+        } else if (col === 'tplnr') {
+          row.tplnr = value;
+          // Lookup ent_hid from tplnr
+          if (value) {
+            const lookedUpEntHid = tplnrToEntHidMap.get(value);
+            if (lookedUpEntHid) {
+              row.ent_hid = lookedUpEntHid;
+            } else {
+              errors.push(`No ent_hid found for tplnr: ${value}`);
+            }
           }
         } else if (requiredColumns.includes(col) || optionalColumns.includes(col)) {
           (row as any)[col] = value;

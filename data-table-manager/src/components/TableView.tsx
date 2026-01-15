@@ -201,10 +201,10 @@ export const TableView: React.FC<TableViewProps> = ({
     try {
       const dataService = getDataService();
       
-      // Convert data to CSV format for bulk import
-      const header = 'scada_tag,pi_tag,product_type,tag_type,aggregation_type,conversion_factor,ent_hid,test_site,api10,uom,meter_id';
+      // Convert data to CSV format for bulk import (include tplnr, exclude ent_hid)
+      const header = 'scada_tag,pi_tag,product_type,tag_type,aggregation_type,tplnr,conversion_factor,test_site,api10,uom,meter_id';
       const rows = data.map(entry => 
-        `${entry.scada_tag},${entry.pi_tag},${entry.product_type},${entry.tag_type},${entry.aggregation_type},${entry.conversion_factor || 0},${entry.ent_hid || 0},${entry.test_site || ''},${entry.api10 || ''},${entry.uom || ''},${entry.meter_id || ''}`
+        `${entry.scada_tag},${entry.pi_tag},${entry.product_type},${entry.tag_type},${entry.aggregation_type},${entry.tplnr || ''},${entry.conversion_factor || 0},${entry.test_site || ''},${entry.api10 || ''},${entry.uom || ''},${entry.meter_id || ''}`
       );
       const csvData = [header, ...rows].join('\n');
       

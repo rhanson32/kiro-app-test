@@ -57,6 +57,7 @@ export interface DataEntryFormData {
   aggregation_type: string;
   conversion_factor: number;
   ent_hid: number;
+  tplnr: string;
   test_site: string;
   api10: string;
   uom: string;

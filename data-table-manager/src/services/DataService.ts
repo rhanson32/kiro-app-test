@@ -386,6 +386,37 @@ export class DataService implements IDataService {
     await this.executeQuery(updateQuery, params);
   }
 
+  async lookupEntHidFromTplnr(tplnrValues: string[]): Promise<Map<string, number>> {
+    const tplnrToEntHidMap = new Map<string, number>();
+    
+    if (tplnrValues.length === 0) {
+      return tplnrToEntHidMap;
+    }
+
+    try {
+      const tplnrList = tplnrValues.map(t => `'${t}'`).join(',');
+      const lookupQuery = `
+        SELECT tplnr, ent_hid
+        FROM operations.fdc.vw_cfentity
+        WHERE tplnr IN (${tplnrList})
+      `;
+      const lookupResult = await this.executeQuery(lookupQuery);
+      
+      lookupResult.rows.forEach(row => {
+        const tplnr = row[0];
+        const ent_hid = row[1];
+        if (tplnr && ent_hid) {
+          tplnrToEntHidMap.set(tplnr, ent_hid);
+        }
+      });
+    } catch (error) {
+      console.error('Error looking up ent_hid values:', error);
+      throw new Error('Failed to lookup entity IDs from tplnr values');
+    }
+
+    return tplnrToEntHidMap;
+  }
+
   async bulkImport(csvData: string): Promise<CSVImportResult> {
     const now = new Date().toISOString();
     const importId = `import-${Date.now()}`;

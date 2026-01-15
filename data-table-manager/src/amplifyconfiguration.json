@@ -15,10 +15,12 @@
             "aws.cognito.signin.user.admin"
           ],
           "redirectSignIn": [
-            "http://localhost:3000/"
+            "http://localhost:3000/",
+            "https://main.d1z255n1afk36o.amplifyapp.com/"
           ],
           "redirectSignOut": [
-            "http://localhost:3000/"
+            "http://localhost:3000/",
+            "https://main.d1z255n1afk36o.amplifyapp.com/"
           ],
           "responseType": "code",
           "providers": [

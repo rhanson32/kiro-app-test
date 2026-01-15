@@ -544,49 +544,57 @@ export class DataService implements IDataService {
       };
     }
 
-    // PHASE 2: All rows are valid, insert them all in a transaction
+    // PHASE 2: All rows are valid, insert them all in a single multi-row INSERT
     try {
-      // Start transaction
-      await this.executeQuery('BEGIN TRANSACTION');
-
+      // Build VALUES clauses for all rows
+      const valuesClauses: string[] = [];
+      
       for (const row of validatedRows) {
         const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        const insertQuery = `
-          INSERT INTO ${this.baseTableName} (
-            id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
-            conversion_factor, ent_hid, tplnr, test_site, api10, uom, meter_id,
-            is_active, is_deleted, create_user, create_date, change_user, change_date
-          ) VALUES (
-            :id, :scada_tag, :pi_tag, :product_type, :tag_type, :aggregation_type,
-            :conversion_factor, :ent_hid, :tplnr, :test_site, :api10, :uom, :meter_id,
-            true, false, :user, :create_date, :user, :change_date
-          )
-        `;
-
-        const params = {
-          id,
-          scada_tag: row.scada_tag || '',
-          pi_tag: row.pi_tag || '',
-          product_type: row.product_type || '',
-          tag_type: row.tag_type || '',
-          aggregation_type: row.aggregation_type || '',
-          conversion_factor: row.conversion_factor || 0,
-          ent_hid: row.ent_hid,
-          tplnr: row.tplnr || '',
-          test_site: row.test_site || '',
-          api10: row.api10 || '',
-          uom: row.uom || '',
-          meter_id: row.meter_id || '',
-          user: 'system',
-          create_date: now,
-          change_date: now
+        
+        // Escape single quotes in string values
+        const escapeValue = (val: any) => {
+          if (val === null || val === undefined) return 'NULL';
+          if (typeof val === 'number') return val.toString();
+          return `'${String(val).replace(/'/g, "''")}'`;
         };
-
-        await this.executeQuery(insertQuery, params);
+        
+        const valuesClause = `(
+          ${escapeValue(id)},
+          ${escapeValue(row.scada_tag || '')},
+          ${escapeValue(row.pi_tag || '')},
+          ${escapeValue(row.product_type || '')},
+          ${escapeValue(row.tag_type || '')},
+          ${escapeValue(row.aggregation_type || '')},
+          ${row.conversion_factor || 0},
+          ${row.ent_hid},
+          ${escapeValue(row.tplnr || '')},
+          ${escapeValue(row.test_site || '')},
+          ${escapeValue(row.api10 || '')},
+          ${escapeValue(row.uom || '')},
+          ${escapeValue(row.meter_id || '')},
+          true,
+          false,
+          'system',
+          ${escapeValue(now)},
+          'system',
+          ${escapeValue(now)}
+        )`;
+        
+        valuesClauses.push(valuesClause);
       }
+      
+      // Create single multi-row INSERT statement
+      const insertQuery = `
+        INSERT INTO ${this.baseTableName} (
+          id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
+          conversion_factor, ent_hid, tplnr, test_site, api10, uom, meter_id,
+          is_active, is_deleted, create_user, create_date, change_user, change_date
+        ) VALUES
+        ${valuesClauses.join(',\n')}
+      `;
 
-      // Commit transaction
-      await this.executeQuery('COMMIT');
+      await this.executeQuery(insertQuery);
 
       return {
         totalRows,
@@ -597,14 +605,7 @@ export class DataService implements IDataService {
         timestamp: new Date()
       };
     } catch (error) {
-      // Rollback on any error
-      try {
-        await this.executeQuery('ROLLBACK');
-      } catch (rollbackError) {
-        console.error('Rollback failed:', rollbackError);
-      }
-      
-      throw new Error(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}. All changes have been rolled back.`);
+      throw new Error(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}.`);
     }
   }
 

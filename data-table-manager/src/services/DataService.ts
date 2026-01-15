@@ -461,7 +461,7 @@ export class DataService implements IDataService {
       try {
         const tplnrList = Array.from(tplnrValues).map(t => `'${t.trim()}'`).join(',');
         const lookupQuery = `
-          SELECT TRIM(entcode) as tplnr, ent_hid
+          SELECT TRIM(entcode) as tplnr, EntHID
           FROM operations.fdc.vw_cfentity
           WHERE TRIM(entcode) IN (${tplnrList})
         `;

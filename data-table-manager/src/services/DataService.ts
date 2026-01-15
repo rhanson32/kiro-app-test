@@ -31,10 +31,14 @@ export class DataService implements IDataService {
   private isConnected: boolean = false;
   private axiosInstance: AxiosInstance | null = null;
   private tableName: string;
+  private baseTableName: string;
 
   constructor(config: DatabricksConfig) {
     this.databricksConfig = config;
     this.tableName = `${config.catalog}.${config.schema}.${config.table || 'data_entries'}`;
+    // Base table for write operations (INSERT, UPDATE, DELETE)
+    const baseTable = process.env.REACT_APP_DATABRICKS_BASE_TABLE || config.table || 'data_entries';
+    this.baseTableName = `${config.catalog}.${config.schema}.${baseTable}`;
   }
 
   /**
@@ -281,7 +285,7 @@ export class DataService implements IDataService {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     const insertQuery = `
-      INSERT INTO ${this.tableName} (
+      INSERT INTO ${this.baseTableName} (
         id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
         conversion_factor, ent_hid, test_site, api10, uom, meter_id,
         is_active, is_deleted, create_user, create_date, change_user, change_date
@@ -328,7 +332,7 @@ export class DataService implements IDataService {
     setFields.push('change_user = :user');
     
     const updateQuery = `
-      UPDATE ${this.tableName}
+      UPDATE ${this.baseTableName}
       SET ${setFields.join(', ')}
       WHERE id = :id
     `;
@@ -344,7 +348,7 @@ export class DataService implements IDataService {
     
     // Soft delete - mark as deleted instead of removing from database
     const deleteQuery = `
-      UPDATE ${this.tableName}
+      UPDATE ${this.baseTableName}
       SET is_deleted = true,
           change_date = :change_date,
           change_user = :user
@@ -365,7 +369,7 @@ export class DataService implements IDataService {
     
     // Toggle is_active status
     const updateQuery = `
-      UPDATE ${this.tableName}
+      UPDATE ${this.baseTableName}
       SET is_active = :is_active,
           change_date = :change_date,
           change_user = :user
@@ -420,7 +424,7 @@ export class DataService implements IDataService {
         // Create entry
         const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const insertQuery = `
-          INSERT INTO ${this.tableName} (
+          INSERT INTO ${this.baseTableName} (
             id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
             conversion_factor, ent_hid, test_site, api10, uom, meter_id,
             is_active, is_deleted, create_user, create_date, change_user, change_date

@@ -24,6 +24,7 @@ export const EntryForm: React.FC<EntryFormProps> = ({
     aggregation_type: '',
     conversion_factor: 1.0,
     ent_hid: 0,
+    tplnr: '',
     test_site: '',
     api10: '',
     uom: '',

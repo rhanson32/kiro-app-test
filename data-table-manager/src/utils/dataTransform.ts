@@ -14,6 +14,7 @@ export function dataEntryToFormData(entry: DataEntry): DataEntryFormData {
     aggregation_type: entry.aggregation_type,
     conversion_factor: entry.conversion_factor,
     ent_hid: entry.ent_hid,
+    tplnr: entry.tplnr,
     test_site: entry.test_site,
     api10: entry.api10,
     uom: entry.uom,

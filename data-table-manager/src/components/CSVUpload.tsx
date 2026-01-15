@@ -173,6 +173,25 @@ export const CSVUpload: React.FC<CSVUploadProps> = ({ isOpen, onClose, onImport 
     }
   };
 
+  const handleDownloadSample = () => {
+    // Create sample CSV content
+    const sampleCSV = `scada_tag,pi_tag,product_type,tag_type,aggregation_type,tplnr,conversion_factor,uom
+SCADA001,PI001,Oil,Flow,Sum,TPLNR001,1.0,BBL
+SCADA002,PI002,Gas,Pressure,Avg,TPLNR002,1.5,MCF
+SCADA003,PI003,Water,Temperature,Max,TPLNR003,2.0,GAL`;
+
+    // Create blob and download
+    const blob = new Blob([sampleCSV], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sample_import.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   const handleClose = () => {
     setFile(null);
     setParsedData([]);
@@ -219,12 +238,20 @@ export const CSVUpload: React.FC<CSVUploadProps> = ({ isOpen, onClose, onImport 
                 Drag and drop your CSV file here
               </p>
               <p className="text-sm text-gray-500 mb-4">or</p>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors"
-              >
-                Browse Files
-              </button>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors"
+                >
+                  Browse Files
+                </button>
+                <button
+                  onClick={handleDownloadSample}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  Download Sample CSV
+                </button>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"

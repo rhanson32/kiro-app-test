@@ -397,8 +397,6 @@ export class DataService implements IDataService {
     }
 
     const totalRows = lines.length - 1; // Exclude header
-    let successfulImports = 0;
-    let failedImports = 0;
     const errors: any[] = [];
 
     // Parse header
@@ -439,7 +437,8 @@ export class DataService implements IDataService {
       }
     }
 
-    // Process each row
+    // PHASE 1: Validate all rows first (no database writes)
+    const validatedRows: any[] = [];
     for (let i = 1; i < lines.length; i++) {
       try {
         const values = lines[i].split(',').map(v => v.trim());
@@ -471,7 +470,42 @@ export class DataService implements IDataService {
           throw new Error('ent_hid could not be determined from tplnr');
         }
 
-        // Create entry
+        // Validate required columns
+        if (!row.scada_tag) throw new Error('scada_tag is required');
+        if (!row.pi_tag) throw new Error('pi_tag is required');
+        if (!row.product_type) throw new Error('product_type is required');
+        if (!row.tag_type) throw new Error('tag_type is required');
+        if (!row.aggregation_type) throw new Error('aggregation_type is required');
+
+        validatedRows.push(row);
+      } catch (error) {
+        errors.push({
+          row: i,
+          field: 'general',
+          value: lines[i],
+          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // If ANY validation errors, fail the entire import
+    if (errors.length > 0) {
+      return {
+        totalRows,
+        successfulImports: 0,
+        failedImports: errors.length,
+        errors,
+        importId,
+        timestamp: new Date()
+      };
+    }
+
+    // PHASE 2: All rows are valid, insert them all in a transaction
+    try {
+      // Start transaction
+      await this.executeQuery('BEGIN TRANSACTION');
+
+      for (const row of validatedRows) {
         const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const insertQuery = `
           INSERT INTO ${this.baseTableName} (
@@ -505,26 +539,29 @@ export class DataService implements IDataService {
         };
 
         await this.executeQuery(insertQuery, params);
-        successfulImports++;
-      } catch (error) {
-        failedImports++;
-        errors.push({
-          row: i,
-          field: 'general',
-          value: lines[i],
-          errorMessage: error instanceof Error ? error.message : 'Unknown error'
-        });
       }
-    }
 
-    return {
-      totalRows,
-      successfulImports,
-      failedImports,
-      errors,
-      importId,
-      timestamp: new Date()
-    };
+      // Commit transaction
+      await this.executeQuery('COMMIT');
+
+      return {
+        totalRows,
+        successfulImports: validatedRows.length,
+        failedImports: 0,
+        errors: [],
+        importId,
+        timestamp: new Date()
+      };
+    } catch (error) {
+      // Rollback on any error
+      try {
+        await this.executeQuery('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('Rollback failed:', rollbackError);
+      }
+      
+      throw new Error(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}. All changes have been rolled back.`);
+    }
   }
 
   async bulkDelete(ids: string[]): Promise<void> {

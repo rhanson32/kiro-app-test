@@ -340,27 +340,41 @@ export class DataService implements IDataService {
     // Remove tplnr from data as it doesn't exist in base table (only in view via join)
     const { tplnr, ...dataWithoutTplnr } = data;
     
+    // Escape single quotes in string values
+    const escapeValue = (val: any) => {
+      if (val === null || val === undefined) return 'NULL';
+      if (typeof val === 'number') return val.toString();
+      return `'${String(val).replace(/'/g, "''")}'`;
+    };
+    
     const insertQuery = `
       INSERT INTO ${this.baseTableName} (
         id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
         conversion_factor, ent_hid, test_site, api10, uom, meter_id,
         is_active, is_deleted, create_user, create_date, change_user, change_date
       ) VALUES (
-        :id, :scada_tag, :pi_tag, :product_type, :tag_type, :aggregation_type,
-        :conversion_factor, :ent_hid, :test_site, :api10, :uom, :meter_id,
-        true, false, :user, :create_date, :user, :change_date
+        ${escapeValue(id)},
+        ${escapeValue(dataWithoutTplnr.scada_tag)},
+        ${escapeValue(dataWithoutTplnr.pi_tag)},
+        ${escapeValue(dataWithoutTplnr.product_type)},
+        ${escapeValue(dataWithoutTplnr.tag_type)},
+        ${escapeValue(dataWithoutTplnr.aggregation_type)},
+        ${dataWithoutTplnr.conversion_factor || 0},
+        ${dataWithoutTplnr.ent_hid},
+        ${escapeValue(dataWithoutTplnr.test_site || '')},
+        ${escapeValue(dataWithoutTplnr.api10 || '')},
+        ${escapeValue(dataWithoutTplnr.uom || '')},
+        ${escapeValue(dataWithoutTplnr.meter_id || '')},
+        true,
+        false,
+        ${escapeValue(user)},
+        ${escapeValue(now)},
+        ${escapeValue(user)},
+        ${escapeValue(now)}
       )
     `;
     
-    const params = {
-      id,
-      ...dataWithoutTplnr,
-      user,
-      create_date: now,
-      change_date: now
-    };
-    
-    await this.executeQuery(insertQuery, params);
+    await this.executeQuery(insertQuery);
     
     // Fetch and return the created entry
     return this.getEntry(id);
@@ -373,14 +387,23 @@ export class DataService implements IDataService {
     // Remove tplnr from data as it doesn't exist in base table (only in view via join)
     const { tplnr, ...dataWithoutTplnr } = data;
     
+    // Escape single quotes in string values
+    const escapeValue = (val: any) => {
+      if (val === null || val === undefined) return 'NULL';
+      if (typeof val === 'number') return val.toString();
+      return `'${String(val).replace(/'/g, "''")}'`;
+    };
+    
     // Build SET clause dynamically based on provided fields
     const setFields: string[] = [];
-    const params: Record<string, any> = { id, change_date: now, user };
     
     Object.entries(dataWithoutTplnr).forEach(([key, value]) => {
       if (value !== undefined) {
-        setFields.push(`${key} = :${key}`);
-        params[key] = value;
+        if (typeof value === 'number') {
+          setFields.push(`${key} = ${value}`);
+        } else {
+          setFields.push(`${key} = ${escapeValue(value)}`);
+        }
       }
     });
     
@@ -388,16 +411,16 @@ export class DataService implements IDataService {
       throw new Error('No fields to update');
     }
     
-    setFields.push('change_date = :change_date');
-    setFields.push('change_user = :user');
+    setFields.push(`change_date = ${escapeValue(now)}`);
+    setFields.push(`change_user = ${escapeValue(user)}`);
     
     const updateQuery = `
       UPDATE ${this.baseTableName}
       SET ${setFields.join(', ')}
-      WHERE id = :id
+      WHERE id = ${escapeValue(id)}
     `;
     
-    await this.executeQuery(updateQuery, params);
+    await this.executeQuery(updateQuery);
     
     // Fetch and return the updated entry
     return this.getEntry(id);
@@ -407,45 +430,47 @@ export class DataService implements IDataService {
     const now = new Date().toISOString();
     const user = userEmail || 'system';
     
+    // Escape single quotes
+    const escapeValue = (val: any) => {
+      if (val === null || val === undefined) return 'NULL';
+      if (typeof val === 'number') return val.toString();
+      return `'${String(val).replace(/'/g, "''")}'`;
+    };
+    
     // Soft delete - mark as deleted instead of removing from database
     const deleteQuery = `
       UPDATE ${this.baseTableName}
       SET is_deleted = true,
-          change_date = :change_date,
-          change_user = :user
-      WHERE id = :id
+          change_date = ${escapeValue(now)},
+          change_user = ${escapeValue(user)}
+      WHERE id = ${escapeValue(id)}
     `;
     
-    const params = {
-      id,
-      change_date: now,
-      user
-    };
-    
-    await this.executeQuery(deleteQuery, params);
+    await this.executeQuery(deleteQuery);
   }
 
   async toggleActive(id: string, isActive: boolean, userEmail?: string): Promise<void> {
     const now = new Date().toISOString();
     const user = userEmail || 'system';
     
+    // Escape single quotes
+    const escapeValue = (val: any) => {
+      if (val === null || val === undefined) return 'NULL';
+      if (typeof val === 'number') return val.toString();
+      if (typeof val === 'boolean') return val.toString();
+      return `'${String(val).replace(/'/g, "''")}'`;
+    };
+    
     // Toggle is_active status
     const updateQuery = `
       UPDATE ${this.baseTableName}
-      SET is_active = :is_active,
-          change_date = :change_date,
-          change_user = :user
-      WHERE id = :id
+      SET is_active = ${isActive},
+          change_date = ${escapeValue(now)},
+          change_user = ${escapeValue(user)}
+      WHERE id = ${escapeValue(id)}
     `;
     
-    const params = {
-      id,
-      is_active: isActive,
-      change_date: now,
-      user
-    };
-    
-    await this.executeQuery(updateQuery, params);
+    await this.executeQuery(updateQuery);
   }
 
   async lookupEntHidFromTplnr(tplnrValues: string[]): Promise<Map<string, number>> {

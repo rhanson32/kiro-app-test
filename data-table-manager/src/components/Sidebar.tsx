@@ -11,14 +11,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
   return (
     <div className={`bg-gray-100 border-r border-gray-200 transition-all duration-300 flex flex-col ${isCollapsed ? 'w-16' : 'w-64'}`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        {!isCollapsed && <h2 className="text-lg font-semibold text-gray-800">XREF Manager</h2>}
+      <div className="px-4 py-5 border-b border-gray-200 flex items-center">
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 hover:bg-gray-200 rounded transition-colors"
+          className="p-2 hover:bg-gray-100 rounded transition-colors text-gray-700"
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {isCollapsed ? '☰' : '◀'}
+          ☰
         </button>
       </div>
 
@@ -31,10 +30,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
           <div className={isCollapsed ? 'space-y-1' : 'ml-4 space-y-1'}>
             <button
               onClick={() => onNavigate('data-entries')}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-colors hover:bg-gray-200 ${
                 currentPage === 'data-entries'
-                  ? 'bg-primary text-white'
-                  : 'text-gray-700 hover:bg-gray-200'
+                  ? 'text-primary font-bold'
+                  : 'text-gray-700'
               }`}
               title="Manage"
             >
@@ -51,10 +50,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
           <div className={isCollapsed ? 'space-y-1' : 'ml-4 space-y-1'}>
             <button
               onClick={() => onNavigate('config')}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-colors hover:bg-gray-200 ${
                 currentPage === 'config'
-                  ? 'bg-primary text-white'
-                  : 'text-gray-700 hover:bg-gray-200'
+                  ? 'text-primary font-bold'
+                  : 'text-gray-700'
               }`}
               title="Config"
             >
@@ -63,10 +62,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
             </button>
             <button
               onClick={() => onNavigate('user-management')}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-colors hover:bg-gray-200 ${
                 currentPage === 'user-management'
-                  ? 'bg-primary text-white'
-                  : 'text-gray-700 hover:bg-gray-200'
+                  ? 'text-primary font-bold'
+                  : 'text-gray-700'
               }`}
               title="User Management"
             >

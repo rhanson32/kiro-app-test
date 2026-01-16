@@ -114,7 +114,7 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white px-8 py-5 flex justify-between items-center shadow-sm border-b border-gray-200">
+        <header className="bg-gray-100 px-8 py-5 flex justify-between items-center shadow-sm border-b border-gray-200">
           <h1 className="text-2xl font-semibold text-gray-800">XREF Manager</h1>
           <div className="flex items-center gap-5">
             <div className="relative group">

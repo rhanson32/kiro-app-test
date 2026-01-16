@@ -180,6 +180,26 @@ export const TableView: React.FC<TableViewProps> = ({
     }
   };
 
+  const handleDeactivateConfirm = async () => {
+    if (!entryToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      const dataService = getDataService();
+      await dataService.toggleActive(entryToDelete.id, false, userEmail);
+      
+      // Reload entries after successful deactivation
+      await loadEntries();
+      setIsDeleteDialogOpen(false);
+      setEntryToDelete(null);
+    } catch (err) {
+      console.error('Deactivate error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to deactivate entry');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleDeleteCancel = () => {
     setIsDeleteDialogOpen(false);
     setEntryToDelete(null);
@@ -608,9 +628,10 @@ export const TableView: React.FC<TableViewProps> = ({
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}
         onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
+        onDeactivate={handleDeactivateConfirm}
+        onDelete={handleDeleteConfirm}
         entryName={entryToDelete?.scada_tag || entryToDelete?.pi_tag}
-        isDeleting={isDeleting}
+        isProcessing={isDeleting}
       />
 
       <CSVUpload

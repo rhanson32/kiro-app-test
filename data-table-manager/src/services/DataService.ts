@@ -161,7 +161,8 @@ export class DataService implements IDataService {
             statement: sql,
             warehouse_id: this.databricksConfig.httpPath.split('/').pop(),
             parameters: parameters,
-            wait_timeout: '30s'
+            wait_timeout: '50s',
+            row_limit: 100000 // Request up to 100k rows
           }
         });
       } else {
@@ -173,7 +174,8 @@ export class DataService implements IDataService {
             statement: sql,
             warehouse_id: this.databricksConfig.httpPath.split('/').pop(),
             parameters: parameters,
-            wait_timeout: '30s'
+            wait_timeout: '50s',
+            row_limit: 100000 // Request up to 100k rows
           }
         );
       }
@@ -205,10 +207,45 @@ export class DataService implements IDataService {
 
       this.isConnected = true;
 
+      // Collect all rows including chunked results
+      let allRows = result.result?.data_array || [];
+      let nextChunkIndex = result.result?.next_chunk_index;
+      let nextChunkInternalLink = result.result?.next_chunk_internal_link;
+
+      console.log(`Initial result: ${allRows.length} rows, has more chunks: ${!!nextChunkIndex || !!nextChunkInternalLink}`);
+
+      // Fetch additional chunks if available
+      while (nextChunkIndex || nextChunkInternalLink) {
+        console.log(`Fetching next chunk at index: ${nextChunkIndex}`);
+        
+        let chunkResponse;
+        if (useProxy) {
+          chunkResponse = await axiosInstance.post('/proxy', {
+            path: `/api/2.0/sql/statements/${statementId}/result/chunks/${nextChunkIndex}`,
+            method: 'GET'
+          });
+        } else {
+          chunkResponse = await axiosInstance.get(
+            `/api/2.0/sql/statements/${statementId}/result/chunks/${nextChunkIndex}`
+          );
+        }
+
+        const chunkData = chunkResponse.data;
+        const chunkRows = chunkData.data_array || [];
+        allRows = allRows.concat(chunkRows);
+        
+        console.log(`Fetched chunk with ${chunkRows.length} rows, total now: ${allRows.length}`);
+        
+        nextChunkIndex = chunkData.next_chunk_index;
+        nextChunkInternalLink = chunkData.next_chunk_internal_link;
+      }
+
+      console.log(`✅ Total rows fetched: ${allRows.length}`);
+
       return {
         columns: result.manifest?.schema?.columns || [],
-        rows: result.result?.data_array || [],
-        rowCount: result.result?.row_count || 0
+        rows: allRows,
+        rowCount: allRows.length
       };
     } catch (error) {
       throw error;
@@ -266,16 +303,19 @@ export class DataService implements IDataService {
     }
 
     // Get only the specific columns we need
+    // Remove LIMIT to fetch all records (Databricks will handle pagination internally)
     const dataQuery = `
       SELECT pi_tag, scada_tag, product_type, tag_type, aggregation_type, ent_hid, entname, tplnr, asset_team, is_active, id
       FROM ${this.tableName}
       ${whereClause}
       ${whereClause ? 'AND' : 'WHERE'} is_active = true AND is_deleted = false
       ORDER BY ${sortBy} ${sortOrder}
-      LIMIT ${pageSize}
     `;
     
+    console.log('Fetching all entries without LIMIT...');
     const result = await this.executeQuery(dataQuery, params);
+    console.log(`Fetched ${result.rows.length} rows from Databricks`);
+    
     const data = result.rows.map(row => this.transformRowToDataEntry(row, result.columns));
     const total = data.length;
 

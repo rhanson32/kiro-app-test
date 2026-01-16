@@ -44,6 +44,12 @@ function makeRequest(options, postData) {
       reject(error);
     });
     
+    // Set timeout to 50 seconds (Lambda max is 60s)
+    req.setTimeout(50000, () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+    
     if (postData) {
       req.write(postData);
     }
@@ -56,7 +62,9 @@ function makeRequest(options, postData) {
  * Lambda handler
  */
 export const handler = async (event) => {
-  console.log('Event:', JSON.stringify(event, null, 2));
+  console.log('Event method:', event.httpMethod);
+  console.log('Event path:', event.path);
+  console.log('Event body:', event.body ? event.body.substring(0, 200) : 'empty');
   
   // Handle OPTIONS request for CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -73,6 +81,7 @@ export const handler = async (event) => {
     const DATABRICKS_TOKEN = process.env.DATABRICKS_TOKEN;
     
     if (!DATABRICKS_HOST || !DATABRICKS_TOKEN) {
+      console.error('Missing Databricks configuration');
       return {
         statusCode: 500,
         headers: corsHeaders,
@@ -87,6 +96,7 @@ export const handler = async (event) => {
     const { path, method = 'POST', data } = body;
     
     if (!path) {
+      console.error('Missing path in request body');
       return {
         statusCode: 400,
         headers: corsHeaders,
@@ -95,6 +105,8 @@ export const handler = async (event) => {
         })
       };
     }
+    
+    console.log(`Proxying ${method} request to: ${path}`);
     
     // Prepare request to Databricks
     const options = {
@@ -111,6 +123,8 @@ export const handler = async (event) => {
     const postData = data ? JSON.stringify(data) : null;
     const response = await makeRequest(options, postData);
     
+    console.log(`Databricks response status: ${response.statusCode}`);
+    
     // Return response
     return {
       statusCode: response.statusCode,
@@ -119,12 +133,14 @@ export const handler = async (event) => {
     };
     
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Lambda error:', error);
+    console.error('Error stack:', error.stack);
     return {
-      statusCode: 500,
+      statusCode: 502,
       headers: corsHeaders,
       body: JSON.stringify({
-        error: error.message || 'Internal server error'
+        error: error.message || 'Internal server error',
+        details: error.stack
       })
     };
   }

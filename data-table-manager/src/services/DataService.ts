@@ -161,8 +161,7 @@ export class DataService implements IDataService {
             statement: sql,
             warehouse_id: this.databricksConfig.httpPath.split('/').pop(),
             parameters: parameters,
-            wait_timeout: '50s',
-            row_limit: 100000 // Request up to 100k rows
+            wait_timeout: '50s'
           }
         });
       } else {
@@ -174,8 +173,7 @@ export class DataService implements IDataService {
             statement: sql,
             warehouse_id: this.databricksConfig.httpPath.split('/').pop(),
             parameters: parameters,
-            wait_timeout: '50s',
-            row_limit: 100000 // Request up to 100k rows
+            wait_timeout: '50s'
           }
         );
       }
@@ -207,45 +205,14 @@ export class DataService implements IDataService {
 
       this.isConnected = true;
 
-      // Collect all rows including chunked results
-      let allRows = result.result?.data_array || [];
-      let nextChunkIndex = result.result?.next_chunk_index;
-      let nextChunkInternalLink = result.result?.next_chunk_internal_link;
-
-      console.log(`Initial result: ${allRows.length} rows, has more chunks: ${!!nextChunkIndex || !!nextChunkInternalLink}`);
-
-      // Fetch additional chunks if available
-      while (nextChunkIndex || nextChunkInternalLink) {
-        console.log(`Fetching next chunk at index: ${nextChunkIndex}`);
-        
-        let chunkResponse;
-        if (useProxy) {
-          chunkResponse = await axiosInstance.post('/proxy', {
-            path: `/api/2.0/sql/statements/${statementId}/result/chunks/${nextChunkIndex}`,
-            method: 'GET'
-          });
-        } else {
-          chunkResponse = await axiosInstance.get(
-            `/api/2.0/sql/statements/${statementId}/result/chunks/${nextChunkIndex}`
-          );
-        }
-
-        const chunkData = chunkResponse.data;
-        const chunkRows = chunkData.data_array || [];
-        allRows = allRows.concat(chunkRows);
-        
-        console.log(`Fetched chunk with ${chunkRows.length} rows, total now: ${allRows.length}`);
-        
-        nextChunkIndex = chunkData.next_chunk_index;
-        nextChunkInternalLink = chunkData.next_chunk_internal_link;
-      }
-
-      console.log(`✅ Total rows fetched: ${allRows.length}`);
+      // Return only the first chunk of data (we use OFFSET/LIMIT for pagination)
+      const rows = result.result?.data_array || [];
+      console.log(`Query returned ${rows.length} rows`);
 
       return {
         columns: result.manifest?.schema?.columns || [],
-        rows: allRows,
-        rowCount: allRows.length
+        rows: rows,
+        rowCount: rows.length
       };
     } catch (error) {
       throw error;
@@ -302,25 +269,49 @@ export class DataService implements IDataService {
       params.search = `%${options.search}%`;
     }
 
-    // Get only the specific columns we need
-    // Remove LIMIT to fetch all records (Databricks will handle pagination internally)
-    const dataQuery = `
-      SELECT pi_tag, scada_tag, product_type, tag_type, aggregation_type, ent_hid, entname, tplnr, asset_team, is_active, id
-      FROM ${this.tableName}
-      ${whereClause}
-      ${whereClause ? 'AND' : 'WHERE'} is_active = true AND is_deleted = false
-      ORDER BY ${sortBy} ${sortOrder}
-    `;
-    
-    console.log('Fetching all entries without LIMIT...');
-    const result = await this.executeQuery(dataQuery, params);
-    console.log(`Fetched ${result.rows.length} rows from Databricks`);
-    
-    const data = result.rows.map(row => this.transformRowToDataEntry(row, result.columns));
-    const total = data.length;
+    // Fetch data in batches to avoid Lambda 6MB payload limit
+    // Each batch will be ~10k records which should be well under the limit
+    const batchSize = 10000;
+    let allData: DataEntry[] = [];
+    let offset = 0;
+    let hasMore = true;
+
+    console.log('Fetching entries in batches...');
+
+    while (hasMore) {
+      const dataQuery = `
+        SELECT pi_tag, scada_tag, product_type, tag_type, aggregation_type, ent_hid, entname, tplnr, asset_team, is_active, id
+        FROM ${this.tableName}
+        ${whereClause}
+        ${whereClause ? 'AND' : 'WHERE'} is_active = true AND is_deleted = false
+        ORDER BY ${sortBy} ${sortOrder}
+        LIMIT ${batchSize} OFFSET ${offset}
+      `;
+      
+      console.log(`Fetching batch at offset ${offset}...`);
+      const result = await this.executeQuery(dataQuery, params);
+      const batchData = result.rows.map(row => this.transformRowToDataEntry(row, result.columns));
+      
+      console.log(`Fetched ${batchData.length} rows in this batch`);
+      
+      if (batchData.length === 0) {
+        hasMore = false;
+      } else {
+        allData = allData.concat(batchData);
+        offset += batchSize;
+        
+        // If we got fewer rows than batch size, we've reached the end
+        if (batchData.length < batchSize) {
+          hasMore = false;
+        }
+      }
+    }
+
+    console.log(`✅ Total rows fetched: ${allData.length}`);
+    const total = allData.length;
 
     return {
-      data,
+      data: allData,
       pagination: {
         page,
         pageSize,

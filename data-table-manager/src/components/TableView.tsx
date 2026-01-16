@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback, useDeferredValue } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useDeferredValue, useTransition } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -49,6 +49,7 @@ export const TableView: React.FC<TableViewProps> = ({
   const [tagTypeFilter, setTagTypeFilter] = useState<string>('All');
   const [isCSVUploadOpen, setIsCSVUploadOpen] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>(''); // Local search input for debouncing
+  const [isPending, startTransition] = useTransition(); // Track filtering state
   
   // Use deferred value for search to prevent blocking UI
   const deferredSearchInput = useDeferredValue(searchInput);
@@ -481,7 +482,11 @@ export const TableView: React.FC<TableViewProps> = ({
               <select
                 id="asset-team-filter"
                 value={assetTeamFilter}
-                onChange={(e) => setAssetTeamFilter(e.target.value)}
+                onChange={(e) => {
+                  startTransition(() => {
+                    setAssetTeamFilter(e.target.value);
+                  });
+                }}
                 className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
               >
                 {uniqueAssetTeams.map(team => (
@@ -499,7 +504,11 @@ export const TableView: React.FC<TableViewProps> = ({
               <select
                 id="product-type-filter"
                 value={productTypeFilter}
-                onChange={(e) => setProductTypeFilter(e.target.value)}
+                onChange={(e) => {
+                  startTransition(() => {
+                    setProductTypeFilter(e.target.value);
+                  });
+                }}
                 className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
               >
                 {uniqueProductTypes.map(type => (
@@ -517,7 +526,11 @@ export const TableView: React.FC<TableViewProps> = ({
               <select
                 id="tag-type-filter"
                 value={tagTypeFilter}
-                onChange={(e) => setTagTypeFilter(e.target.value)}
+                onChange={(e) => {
+                  startTransition(() => {
+                    setTagTypeFilter(e.target.value);
+                  });
+                }}
                 className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
               >
                 {uniqueTagTypes.map(type => (
@@ -569,6 +582,16 @@ export const TableView: React.FC<TableViewProps> = ({
       </div>
 
       <div className="h-[calc(100vh-200px)] overflow-y-auto overflow-x-auto bg-white rounded-lg shadow-md relative">
+        {/* Filtering overlay */}
+        {isPending && (
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] z-20 flex items-center justify-center">
+            <div className="flex items-center gap-2 text-gray-600">
+              <div className="w-6 h-6 border-3 border-gray-300 border-t-primary rounded-full animate-spin"></div>
+              <span className="text-sm font-medium">Filtering...</span>
+            </div>
+          </div>
+        )}
+        
         <table className="w-full border-collapse table-fixed">
           <thead className="bg-gray-50 border-b-2 border-gray-300 sticky top-0 z-10">
             {table.getHeaderGroups().map(headerGroup => (

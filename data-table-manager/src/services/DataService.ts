@@ -270,13 +270,13 @@ export class DataService implements IDataService {
     }
 
     // Fetch data in batches to avoid Lambda 6MB payload limit
-    // Each batch will be ~10k records which should be well under the limit
-    const batchSize = 10000;
+    // Each batch will be ~20k records which should be well under the limit
+    const batchSize = 20000;
     let allData: DataEntry[] = [];
     let offset = 0;
     let hasMore = true;
 
-    console.log('Fetching entries in batches...');
+    console.log('Fetching entries in batches of 20k...');
 
     while (hasMore) {
       const dataQuery = `

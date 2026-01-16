@@ -32,6 +32,11 @@ export interface IDataService {
   searchEntries(query: string, options?: QueryOptions): Promise<PaginatedResponse<DataEntry>>;
   filterEntries(filters: Record<string, any>, options?: QueryOptions): Promise<PaginatedResponse<DataEntry>>;
   
+  // Lookup operations
+  lookupEntHidFromTplnr(tplnrValues: string[]): Promise<Map<string, number>>;
+  getTagTypes(): Promise<string[]>;
+  getAggregationTypes(): Promise<string[]>;
+  
   // Connection management
   testConnection(): Promise<boolean>;
   reconnect(): Promise<void>;
@@ -444,6 +449,56 @@ export class DataService implements IDataService {
     }
 
     return tplnrToEntHidMap;
+  }
+
+  async getTagTypes(): Promise<string[]> {
+    try {
+      // Use base catalog/schema for tag types lookup
+      const baseCatalog = process.env.REACT_APP_DATABRICKS_BASE_CATALOG || this.databricksConfig.catalog;
+      const tagTypesQuery = `
+        SELECT DISTINCT tag_type
+        FROM ${baseCatalog}.xref.xref_tag_types
+        ORDER BY tag_type
+      `;
+      
+      console.log('Fetching tag types from:', `${baseCatalog}.xref.xref_tag_types`);
+      const result = await this.executeQuery(tagTypesQuery);
+      
+      const tagTypes = result.rows.map(row => row[0]).filter(Boolean);
+      console.log(`Found ${tagTypes.length} tag types`);
+      
+      return tagTypes;
+    } catch (error) {
+      console.error('Error fetching tag types:', error);
+      console.error('Error details:', error instanceof Error ? error.message : error);
+      // Return empty array on error so form still works
+      return [];
+    }
+  }
+
+  async getAggregationTypes(): Promise<string[]> {
+    try {
+      // Use base catalog/schema for aggregation types lookup
+      const baseCatalog = process.env.REACT_APP_DATABRICKS_BASE_CATALOG || this.databricksConfig.catalog;
+      const aggregationTypesQuery = `
+        SELECT DISTINCT aggregation_type
+        FROM ${baseCatalog}.xref.xref_aggregation_types
+        ORDER BY aggregation_type
+      `;
+      
+      console.log('Fetching aggregation types from:', `${baseCatalog}.xref.xref_aggregation_types`);
+      const result = await this.executeQuery(aggregationTypesQuery);
+      
+      const aggregationTypes = result.rows.map(row => row[0]).filter(Boolean);
+      console.log(`Found ${aggregationTypes.length} aggregation types`);
+      
+      return aggregationTypes;
+    } catch (error) {
+      console.error('Error fetching aggregation types:', error);
+      console.error('Error details:', error instanceof Error ? error.message : error);
+      // Return empty array on error so form still works
+      return [];
+    }
   }
 
   async bulkImport(csvData: string, userEmail?: string): Promise<CSVImportResult> {

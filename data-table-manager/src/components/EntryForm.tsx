@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DataEntry, DataEntryFormData } from '../types/DataEntry';
+import { getDataService } from '../services/DataService';
 
 interface EntryFormProps {
   isOpen: boolean;
@@ -33,8 +34,18 @@ export const EntryForm: React.FC<EntryFormProps> = ({
 
   const [errors, setErrors] = useState<Partial<Record<keyof DataEntryFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tagTypes, setTagTypes] = useState<string[]>([]);
+  const [loadingTagTypes, setLoadingTagTypes] = useState(false);
+  const [aggregationTypes, setAggregationTypes] = useState<string[]>([]);
+  const [loadingAggregationTypes, setLoadingAggregationTypes] = useState(false);
 
   useEffect(() => {
+    if (isOpen) {
+      // Load tag types and aggregation types when form opens
+      loadTagTypes();
+      loadAggregationTypes();
+    }
+    
     if (entry && mode === 'edit') {
       setFormData({
         scada_tag: entry.scada_tag || '',
@@ -69,6 +80,34 @@ export const EntryForm: React.FC<EntryFormProps> = ({
     setErrors({});
   }, [entry, mode, isOpen]);
 
+  const loadTagTypes = async () => {
+    try {
+      setLoadingTagTypes(true);
+      const dataService = getDataService();
+      const types = await dataService.getTagTypes();
+      setTagTypes(types);
+    } catch (error) {
+      console.error('Error loading tag types:', error);
+      // Form will still work with empty tag types array
+    } finally {
+      setLoadingTagTypes(false);
+    }
+  };
+
+  const loadAggregationTypes = async () => {
+    try {
+      setLoadingAggregationTypes(true);
+      const dataService = getDataService();
+      const types = await dataService.getAggregationTypes();
+      setAggregationTypes(types);
+    } catch (error) {
+      console.error('Error loading aggregation types:', error);
+      // Form will still work with empty aggregation types array
+    } finally {
+      setLoadingAggregationTypes(false);
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof DataEntryFormData, string>> = {};
 
@@ -78,7 +117,7 @@ export const EntryForm: React.FC<EntryFormProps> = ({
     if (!formData.tag_type.trim()) newErrors.tag_type = 'Tag Type is required';
     if (!formData.aggregation_type.trim()) newErrors.aggregation_type = 'Aggregation Type is required';
     if (formData.conversion_factor <= 0) newErrors.conversion_factor = 'Conversion Factor must be greater than 0';
-    if (formData.ent_hid < 0) newErrors.ent_hid = 'Entity HID must be non-negative';
+    if (!formData.tplnr.trim()) newErrors.tplnr = 'TPLNR is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -90,10 +129,23 @@ export const EntryForm: React.FC<EntryFormProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      // Lookup ent_hid from tplnr before submitting
+      const dataService = getDataService();
+      const tplnrToEntHidMap = await dataService.lookupEntHidFromTplnr([formData.tplnr.trim()]);
+      const ent_hid = tplnrToEntHidMap.get(formData.tplnr.trim());
+      
+      if (!ent_hid) {
+        setErrors(prev => ({ ...prev, tplnr: `No entity found for TPLNR: ${formData.tplnr}` }));
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Submit with looked up ent_hid
+      await onSubmit({ ...formData, ent_hid });
       onClose();
     } catch (error) {
       console.error('Form submission error:', error);
+      setErrors(prev => ({ ...prev, tplnr: 'Failed to lookup entity ID' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -161,39 +213,62 @@ export const EntryForm: React.FC<EntryFormProps> = ({
             {/* Product Type */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="product_type" className="text-sm font-medium text-gray-700">Product Type *</label>
-              <input
+              <select
                 id="product_type"
-                type="text"
                 value={formData.product_type}
                 onChange={(e) => handleChange('product_type', e.target.value)}
                 className={inputClass(!!errors.product_type)}
-              />
+              >
+                <option value="">Select Product Type</option>
+                <option value="Gas">Gas</option>
+                <option value="Oil">Oil</option>
+                <option value="Water">Water</option>
+                <option value="None">None</option>
+              </select>
               {errors.product_type && <span className="text-xs text-red-500 mt-0.5">{errors.product_type}</span>}
             </div>
 
             {/* Tag Type */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="tag_type" className="text-sm font-medium text-gray-700">Tag Type *</label>
-              <input
+              <select
                 id="tag_type"
-                type="text"
                 value={formData.tag_type}
                 onChange={(e) => handleChange('tag_type', e.target.value)}
                 className={inputClass(!!errors.tag_type)}
-              />
+                disabled={loadingTagTypes}
+              >
+                <option value="">
+                  {loadingTagTypes ? 'Loading...' : 'Select Tag Type'}
+                </option>
+                {tagTypes.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
               {errors.tag_type && <span className="text-xs text-red-500 mt-0.5">{errors.tag_type}</span>}
             </div>
 
             {/* Aggregation Type */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="aggregation_type" className="text-sm font-medium text-gray-700">Aggregation Type *</label>
-              <input
+              <select
                 id="aggregation_type"
-                type="text"
                 value={formData.aggregation_type}
                 onChange={(e) => handleChange('aggregation_type', e.target.value)}
                 className={inputClass(!!errors.aggregation_type)}
-              />
+                disabled={loadingAggregationTypes}
+              >
+                <option value="">
+                  {loadingAggregationTypes ? 'Loading...' : 'Select Aggregation Type'}
+                </option>
+                {aggregationTypes.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
               {errors.aggregation_type && <span className="text-xs text-red-500 mt-0.5">{errors.aggregation_type}</span>}
             </div>
 
@@ -211,17 +286,17 @@ export const EntryForm: React.FC<EntryFormProps> = ({
               {errors.conversion_factor && <span className="text-xs text-red-500 mt-0.5">{errors.conversion_factor}</span>}
             </div>
 
-            {/* Entity HID */}
+            {/* TPLNR */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="ent_hid" className="text-sm font-medium text-gray-700">Entity HID *</label>
+              <label htmlFor="tplnr" className="text-sm font-medium text-gray-700">TPLNR *</label>
               <input
-                id="ent_hid"
-                type="number"
-                value={formData.ent_hid}
-                onChange={(e) => handleChange('ent_hid', parseInt(e.target.value) || 0)}
-                className={inputClass(!!errors.ent_hid)}
+                id="tplnr"
+                type="text"
+                value={formData.tplnr}
+                onChange={(e) => handleChange('tplnr', e.target.value)}
+                className={inputClass(!!errors.tplnr)}
               />
-              {errors.ent_hid && <span className="text-xs text-red-500 mt-0.5">{errors.ent_hid}</span>}
+              {errors.tplnr && <span className="text-xs text-red-500 mt-0.5">{errors.tplnr}</span>}
             </div>
 
             {/* UOM */}

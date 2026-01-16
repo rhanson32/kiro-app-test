@@ -129,19 +129,22 @@ export const EntryForm: React.FC<EntryFormProps> = ({
 
     setIsSubmitting(true);
     try {
+      // Normalize whitespace in TPLNR (replace multiple spaces/tabs with single space, then trim)
+      const normalizedTplnr = formData.tplnr.replace(/\s+/g, ' ').trim();
+      
       // Lookup ent_hid from tplnr before submitting
       const dataService = getDataService();
-      const tplnrToEntHidMap = await dataService.lookupEntHidFromTplnr([formData.tplnr.trim()]);
-      const ent_hid = tplnrToEntHidMap.get(formData.tplnr.trim());
+      const tplnrToEntHidMap = await dataService.lookupEntHidFromTplnr([normalizedTplnr]);
+      const ent_hid = tplnrToEntHidMap.get(normalizedTplnr);
       
       if (!ent_hid) {
-        setErrors(prev => ({ ...prev, tplnr: `No entity found for TPLNR: ${formData.tplnr}` }));
+        setErrors(prev => ({ ...prev, tplnr: `No entity found for TPLNR: ${normalizedTplnr}` }));
         setIsSubmitting(false);
         return;
       }
       
-      // Submit with looked up ent_hid
-      await onSubmit({ ...formData, ent_hid });
+      // Submit with looked up ent_hid and normalized tplnr
+      await onSubmit({ ...formData, tplnr: normalizedTplnr, ent_hid });
       onClose();
     } catch (error) {
       console.error('Form submission error:', error);

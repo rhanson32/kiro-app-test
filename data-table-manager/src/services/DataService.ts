@@ -450,16 +450,16 @@ export class DataService implements IDataService {
     }
 
     try {
-      // Trim tplnr values to handle hidden spaces
-      const trimmedTplnrValues = tplnrValues.map(t => t.trim());
+      // Trim tplnr values to handle hidden spaces (including tabs, newlines, etc.)
+      const trimmedTplnrValues = tplnrValues.map(t => t.replace(/\s+/g, ' ').trim());
       const tplnrList = trimmedTplnrValues.map(t => `'${t}'`).join(',');
       const lookupQuery = `
-        SELECT TRIM(entcode) as tplnr, EntHID
+        SELECT TRIM(REGEXP_REPLACE(entcode, '\\\\s+', ' ')) as tplnr, EntHID
         FROM operations.fdc.vw_cfentity
-        WHERE TRIM(entcode) IN (${tplnrList})
+        WHERE TRIM(REGEXP_REPLACE(entcode, '\\\\s+', ' ')) IN (${tplnrList})
       `;
       
-      console.log('Executing tplnr lookup query:', lookupQuery);
+      console.log('Executing tplnr lookup query:', lookupQuery.substring(0, 200));
       const lookupResult = await this.executeQuery(lookupQuery);
       console.log(`Lookup found ${lookupResult.rows.length} matches out of ${tplnrValues.length} tplnr values`);
       
@@ -467,7 +467,9 @@ export class DataService implements IDataService {
         const tplnr = row[0];
         const ent_hid = row[1];
         if (tplnr && ent_hid) {
-          tplnrToEntHidMap.set(tplnr.trim(), ent_hid);
+          // Normalize whitespace and trim
+          const normalizedTplnr = String(tplnr).replace(/\s+/g, ' ').trim();
+          tplnrToEntHidMap.set(normalizedTplnr, ent_hid);
         }
       });
       
@@ -592,7 +594,9 @@ export class DataService implements IDataService {
       const values = lines[i].split(',').map(v => v.trim());
       const tplnrIndex = header.indexOf('tplnr');
       if (tplnrIndex >= 0 && values[tplnrIndex]) {
-        tplnrValues.add(values[tplnrIndex]);
+        // Normalize whitespace: replace multiple spaces/tabs with single space
+        const normalizedTplnr = values[tplnrIndex].replace(/\s+/g, ' ').trim();
+        tplnrValues.add(normalizedTplnr);
       }
     }
 
@@ -600,11 +604,11 @@ export class DataService implements IDataService {
     const tplnrToEntHidMap = new Map<string, number>();
     if (tplnrValues.size > 0) {
       try {
-        const tplnrList = Array.from(tplnrValues).map(t => `'${t.trim()}'`).join(',');
+        const tplnrList = Array.from(tplnrValues).map(t => `'${t}'`).join(',');
         const lookupQuery = `
-          SELECT TRIM(entcode) as tplnr, EntHID
+          SELECT TRIM(REGEXP_REPLACE(entcode, '\\\\s+', ' ')) as tplnr, EntHID
           FROM operations.fdc.vw_cfentity
-          WHERE TRIM(entcode) IN (${tplnrList})
+          WHERE TRIM(REGEXP_REPLACE(entcode, '\\\\s+', ' ')) IN (${tplnrList})
         `;
         const lookupResult = await this.executeQuery(lookupQuery);
         
@@ -612,7 +616,9 @@ export class DataService implements IDataService {
           const tplnr = row[0];
           const ent_hid = row[1];
           if (tplnr && ent_hid) {
-            tplnrToEntHidMap.set(tplnr.trim(), ent_hid);
+            // Normalize whitespace and trim
+            const normalizedTplnr = String(tplnr).replace(/\s+/g, ' ').trim();
+            tplnrToEntHidMap.set(normalizedTplnr, ent_hid);
           }
         });
       } catch (error) {
@@ -639,12 +645,13 @@ export class DataService implements IDataService {
 
         // Always lookup ent_hid from tplnr
         if (row.tplnr) {
-          const trimmedTplnr = row.tplnr.trim();
-          const lookedUpEntHid = tplnrToEntHidMap.get(trimmedTplnr);
+          // Normalize whitespace: replace multiple spaces/tabs with single space, then trim
+          const normalizedTplnr = row.tplnr.replace(/\s+/g, ' ').trim();
+          const lookedUpEntHid = tplnrToEntHidMap.get(normalizedTplnr);
           if (lookedUpEntHid) {
             row.ent_hid = lookedUpEntHid;
           } else {
-            throw new Error(`No ent_hid found for tplnr: ${trimmedTplnr}`);
+            throw new Error(`No ent_hid found for tplnr: ${normalizedTplnr}`);
           }
         } else {
           throw new Error('tplnr is required');

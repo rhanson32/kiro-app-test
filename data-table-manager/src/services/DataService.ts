@@ -337,6 +337,9 @@ export class DataService implements IDataService {
     const id = generateUUID();
     const user = userEmail || 'system';
     
+    // Remove tplnr from data as it doesn't exist in base table (only in view via join)
+    const { tplnr, ...dataWithoutTplnr } = data;
+    
     const insertQuery = `
       INSERT INTO ${this.baseTableName} (
         id, scada_tag, pi_tag, product_type, tag_type, aggregation_type,
@@ -351,7 +354,7 @@ export class DataService implements IDataService {
     
     const params = {
       id,
-      ...data,
+      ...dataWithoutTplnr,
       user,
       create_date: now,
       change_date: now
@@ -367,11 +370,14 @@ export class DataService implements IDataService {
     const now = new Date().toISOString();
     const user = userEmail || 'system';
     
+    // Remove tplnr from data as it doesn't exist in base table (only in view via join)
+    const { tplnr, ...dataWithoutTplnr } = data;
+    
     // Build SET clause dynamically based on provided fields
     const setFields: string[] = [];
     const params: Record<string, any> = { id, change_date: now, user };
     
-    Object.entries(data).forEach(([key, value]) => {
+    Object.entries(dataWithoutTplnr).forEach(([key, value]) => {
       if (value !== undefined) {
         setFields.push(`${key} = :${key}`);
         params[key] = value;

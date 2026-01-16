@@ -183,168 +183,178 @@ export const EntryForm: React.FC<EntryFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-8">
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            {/* SCADA Tag */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="scada_tag" className="text-sm font-medium text-gray-700">SCADA Tag *</label>
-              <input
-                id="scada_tag"
-                type="text"
-                value={formData.scada_tag}
-                onChange={(e) => handleChange('scada_tag', e.target.value)}
-                className={inputClass(!!errors.scada_tag)}
-              />
-              {errors.scada_tag && <span className="text-xs text-red-500 mt-0.5">{errors.scada_tag}</span>}
-            </div>
+          {/* Required Fields Section */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Required Fields</h3>
+            <div className="grid grid-cols-2 gap-6">
+              {/* SCADA Tag */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="scada_tag" className="text-sm font-medium text-gray-700">SCADA Tag *</label>
+                <input
+                  id="scada_tag"
+                  type="text"
+                  value={formData.scada_tag}
+                  onChange={(e) => handleChange('scada_tag', e.target.value)}
+                  className={inputClass(!!errors.scada_tag)}
+                />
+                {errors.scada_tag && <span className="text-xs text-red-500 mt-0.5">{errors.scada_tag}</span>}
+              </div>
 
-            {/* PI Tag */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pi_tag" className="text-sm font-medium text-gray-700">PI Tag *</label>
-              <input
-                id="pi_tag"
-                type="text"
-                value={formData.pi_tag}
-                onChange={(e) => handleChange('pi_tag', e.target.value)}
-                className={inputClass(!!errors.pi_tag)}
-              />
-              {errors.pi_tag && <span className="text-xs text-red-500 mt-0.5">{errors.pi_tag}</span>}
-            </div>
+              {/* PI Tag */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="pi_tag" className="text-sm font-medium text-gray-700">PI Tag *</label>
+                <input
+                  id="pi_tag"
+                  type="text"
+                  value={formData.pi_tag}
+                  onChange={(e) => handleChange('pi_tag', e.target.value)}
+                  className={inputClass(!!errors.pi_tag)}
+                />
+                {errors.pi_tag && <span className="text-xs text-red-500 mt-0.5">{errors.pi_tag}</span>}
+              </div>
 
-            {/* Product Type */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="product_type" className="text-sm font-medium text-gray-700">Product Type *</label>
-              <select
-                id="product_type"
-                value={formData.product_type}
-                onChange={(e) => handleChange('product_type', e.target.value)}
-                className={inputClass(!!errors.product_type)}
-              >
-                <option value="">Select Product Type</option>
-                <option value="Gas">Gas</option>
-                <option value="Oil">Oil</option>
-                <option value="Water">Water</option>
-                <option value="None">None</option>
-              </select>
-              {errors.product_type && <span className="text-xs text-red-500 mt-0.5">{errors.product_type}</span>}
-            </div>
+              {/* Product Type */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="product_type" className="text-sm font-medium text-gray-700">Product Type *</label>
+                <select
+                  id="product_type"
+                  value={formData.product_type}
+                  onChange={(e) => handleChange('product_type', e.target.value)}
+                  className={inputClass(!!errors.product_type)}
+                >
+                  <option value="">Select Product Type</option>
+                  <option value="Gas">Gas</option>
+                  <option value="Oil">Oil</option>
+                  <option value="Water">Water</option>
+                  <option value="None">None</option>
+                </select>
+                {errors.product_type && <span className="text-xs text-red-500 mt-0.5">{errors.product_type}</span>}
+              </div>
 
-            {/* Tag Type */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="tag_type" className="text-sm font-medium text-gray-700">Tag Type *</label>
-              <select
-                id="tag_type"
-                value={formData.tag_type}
-                onChange={(e) => handleChange('tag_type', e.target.value)}
-                className={inputClass(!!errors.tag_type)}
-                disabled={loadingTagTypes}
-              >
-                <option value="">
-                  {loadingTagTypes ? 'Loading...' : 'Select Tag Type'}
-                </option>
-                {tagTypes.map(type => (
-                  <option key={type} value={type}>
-                    {type}
+              {/* Tag Type */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="tag_type" className="text-sm font-medium text-gray-700">Tag Type *</label>
+                <select
+                  id="tag_type"
+                  value={formData.tag_type}
+                  onChange={(e) => handleChange('tag_type', e.target.value)}
+                  className={inputClass(!!errors.tag_type)}
+                  disabled={loadingTagTypes}
+                >
+                  <option value="">
+                    {loadingTagTypes ? 'Loading...' : 'Select Tag Type'}
                   </option>
-                ))}
-              </select>
-              {errors.tag_type && <span className="text-xs text-red-500 mt-0.5">{errors.tag_type}</span>}
-            </div>
+                  {tagTypes.map(type => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                {errors.tag_type && <span className="text-xs text-red-500 mt-0.5">{errors.tag_type}</span>}
+              </div>
 
-            {/* Aggregation Type */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="aggregation_type" className="text-sm font-medium text-gray-700">Aggregation Type *</label>
-              <select
-                id="aggregation_type"
-                value={formData.aggregation_type}
-                onChange={(e) => handleChange('aggregation_type', e.target.value)}
-                className={inputClass(!!errors.aggregation_type)}
-                disabled={loadingAggregationTypes}
-              >
-                <option value="">
-                  {loadingAggregationTypes ? 'Loading...' : 'Select Aggregation Type'}
-                </option>
-                {aggregationTypes.map(type => (
-                  <option key={type} value={type}>
-                    {type}
+              {/* Aggregation Type */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="aggregation_type" className="text-sm font-medium text-gray-700">Aggregation Type *</label>
+                <select
+                  id="aggregation_type"
+                  value={formData.aggregation_type}
+                  onChange={(e) => handleChange('aggregation_type', e.target.value)}
+                  className={inputClass(!!errors.aggregation_type)}
+                  disabled={loadingAggregationTypes}
+                >
+                  <option value="">
+                    {loadingAggregationTypes ? 'Loading...' : 'Select Aggregation Type'}
                   </option>
-                ))}
-              </select>
-              {errors.aggregation_type && <span className="text-xs text-red-500 mt-0.5">{errors.aggregation_type}</span>}
-            </div>
+                  {aggregationTypes.map(type => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                {errors.aggregation_type && <span className="text-xs text-red-500 mt-0.5">{errors.aggregation_type}</span>}
+              </div>
 
-            {/* Conversion Factor */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="conversion_factor" className="text-sm font-medium text-gray-700">Conversion Factor *</label>
-              <input
-                id="conversion_factor"
-                type="number"
-                step="0.0001"
-                value={formData.conversion_factor}
-                onChange={(e) => handleChange('conversion_factor', parseFloat(e.target.value) || 0)}
-                className={inputClass(!!errors.conversion_factor)}
-              />
-              {errors.conversion_factor && <span className="text-xs text-red-500 mt-0.5">{errors.conversion_factor}</span>}
-            </div>
+              {/* Conversion Factor */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="conversion_factor" className="text-sm font-medium text-gray-700">Conversion Factor *</label>
+                <input
+                  id="conversion_factor"
+                  type="number"
+                  step="0.0001"
+                  value={formData.conversion_factor}
+                  onChange={(e) => handleChange('conversion_factor', parseFloat(e.target.value) || 0)}
+                  className={inputClass(!!errors.conversion_factor)}
+                />
+                {errors.conversion_factor && <span className="text-xs text-red-500 mt-0.5">{errors.conversion_factor}</span>}
+              </div>
 
-            {/* TPLNR */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="tplnr" className="text-sm font-medium text-gray-700">TPLNR *</label>
-              <input
-                id="tplnr"
-                type="text"
-                value={formData.tplnr}
-                onChange={(e) => handleChange('tplnr', e.target.value)}
-                className={inputClass(!!errors.tplnr)}
-              />
-              {errors.tplnr && <span className="text-xs text-red-500 mt-0.5">{errors.tplnr}</span>}
+              {/* TPLNR */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="tplnr" className="text-sm font-medium text-gray-700">TPLNR *</label>
+                <input
+                  id="tplnr"
+                  type="text"
+                  value={formData.tplnr}
+                  onChange={(e) => handleChange('tplnr', e.target.value)}
+                  className={inputClass(!!errors.tplnr)}
+                />
+                {errors.tplnr && <span className="text-xs text-red-500 mt-0.5">{errors.tplnr}</span>}
+              </div>
             </div>
+          </div>
 
-            {/* UOM */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="uom" className="text-sm font-medium text-gray-700">UOM</label>
-              <input
-                id="uom"
-                type="text"
-                value={formData.uom}
-                onChange={(e) => handleChange('uom', e.target.value)}
-                className={inputClass(false)}
-              />
-            </div>
+          {/* Additional Fields Section */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Additional Fields</h3>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Unit of Measure */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="uom" className="text-sm font-medium text-gray-700">Unit of Measure</label>
+                <input
+                  id="uom"
+                  type="text"
+                  value={formData.uom}
+                  onChange={(e) => handleChange('uom', e.target.value)}
+                  className={inputClass(false)}
+                />
+              </div>
 
-            {/* Test Site */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="test_site" className="text-sm font-medium text-gray-700">Test Site</label>
-              <input
-                id="test_site"
-                type="text"
-                value={formData.test_site}
-                onChange={(e) => handleChange('test_site', e.target.value)}
-                className={inputClass(false)}
-              />
-            </div>
+              {/* Test Site */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="test_site" className="text-sm font-medium text-gray-700">Test Site (Well Tests Only)</label>
+                <input
+                  id="test_site"
+                  type="text"
+                  value={formData.test_site}
+                  onChange={(e) => handleChange('test_site', e.target.value)}
+                  className={inputClass(false)}
+                />
+              </div>
 
-            {/* API 10 */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="api10" className="text-sm font-medium text-gray-700">API 10</label>
-              <input
-                id="api10"
-                type="text"
-                value={formData.api10}
-                onChange={(e) => handleChange('api10', e.target.value)}
-                className={inputClass(false)}
-              />
-            </div>
+              {/* API 10 */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="api10" className="text-sm font-medium text-gray-700">API 10</label>
+                <input
+                  id="api10"
+                  type="text"
+                  value={formData.api10}
+                  onChange={(e) => handleChange('api10', e.target.value)}
+                  className={inputClass(false)}
+                />
+              </div>
 
-            {/* Meter ID */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="meter_id" className="text-sm font-medium text-gray-700">Meter ID</label>
-              <input
-                id="meter_id"
-                type="text"
-                value={formData.meter_id}
-                onChange={(e) => handleChange('meter_id', e.target.value)}
-                className={inputClass(false)}
-              />
+              {/* Meter ID */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="meter_id" className="text-sm font-medium text-gray-700">Meter ID</label>
+                <input
+                  id="meter_id"
+                  type="text"
+                  value={formData.meter_id}
+                  onChange={(e) => handleChange('meter_id', e.target.value)}
+                  className={inputClass(false)}
+                />
+              </div>
             </div>
           </div>
 

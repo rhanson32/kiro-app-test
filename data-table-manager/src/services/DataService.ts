@@ -36,6 +36,8 @@ export interface IDataService {
   lookupEntHidFromTplnr(tplnrValues: string[]): Promise<Map<string, number>>;
   getTagTypes(): Promise<string[]>;
   getAggregationTypes(): Promise<string[]>;
+  addTagType(tagType: string): Promise<void>;
+  addAggregationType(aggregationType: string): Promise<void>;
   
   // Connection management
   testConnection(): Promise<boolean>;
@@ -268,6 +270,7 @@ export class DataService implements IDataService {
       SELECT pi_tag, scada_tag, product_type, tag_type, aggregation_type, ent_hid, entname, tplnr, asset_team, is_active, id
       FROM ${this.tableName}
       ${whereClause}
+      ${whereClause ? 'AND' : 'WHERE'} is_active = true AND is_deleted = false
       ORDER BY ${sortBy} ${sortOrder}
       LIMIT ${pageSize}
     `;
@@ -498,6 +501,40 @@ export class DataService implements IDataService {
       console.error('Error details:', error instanceof Error ? error.message : error);
       // Return empty array on error so form still works
       return [];
+    }
+  }
+
+  async addTagType(tagType: string): Promise<void> {
+    try {
+      const baseCatalog = process.env.REACT_APP_DATABRICKS_BASE_CATALOG || this.databricksConfig.catalog;
+      const insertQuery = `
+        INSERT INTO ${baseCatalog}.xref.xref_tag_types (tag_type)
+        VALUES ('${tagType.replace(/'/g, "''")}')
+      `;
+      
+      console.log('Adding tag type:', tagType);
+      await this.executeQuery(insertQuery);
+      console.log('Tag type added successfully');
+    } catch (error) {
+      console.error('Error adding tag type:', error);
+      throw new Error(`Failed to add tag type: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async addAggregationType(aggregationType: string): Promise<void> {
+    try {
+      const baseCatalog = process.env.REACT_APP_DATABRICKS_BASE_CATALOG || this.databricksConfig.catalog;
+      const insertQuery = `
+        INSERT INTO ${baseCatalog}.xref.xref_aggregation_types (aggregation_type)
+        VALUES ('${aggregationType.replace(/'/g, "''")}')
+      `;
+      
+      console.log('Adding aggregation type:', aggregationType);
+      await this.executeQuery(insertQuery);
+      console.log('Aggregation type added successfully');
+    } catch (error) {
+      console.error('Error adding aggregation type:', error);
+      throw new Error(`Failed to add aggregation type: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

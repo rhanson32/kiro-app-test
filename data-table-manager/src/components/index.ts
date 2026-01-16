@@ -25,6 +25,10 @@ export { default as DeleteConfirmDialog } from './DeleteConfirmDialog';
 export { CSVUpload } from './CSVUpload';
 // export { default as FileUpload } from './upload/FileUpload';
 
+// Navigation components
+export { Sidebar } from './Sidebar';
+export { ConfigPage } from './ConfigPage';
+
 // Common components
 // export { default as LoadingSpinner } from './common/LoadingSpinner';
 // export { default as ErrorBoundary } from './common/ErrorBoundary';

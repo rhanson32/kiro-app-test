@@ -47,7 +47,6 @@ export const TableView: React.FC<TableViewProps> = ({
   const [assetTeamFilter, setAssetTeamFilter] = useState<string>('All');
   const [productTypeFilter, setProductTypeFilter] = useState<string>('All');
   const [tagTypeFilter, setTagTypeFilter] = useState<string>('All');
-  const [activeFilter, setActiveFilter] = useState<string>('All');
   const [isCSVUploadOpen, setIsCSVUploadOpen] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>(''); // Local search input for debouncing
   
@@ -249,11 +248,9 @@ export const TableView: React.FC<TableViewProps> = ({
       if (assetTeamFilter !== 'All' && entry.asset_team !== assetTeamFilter) return false;
       if (productTypeFilter !== 'All' && entry.product_type !== productTypeFilter) return false;
       if (tagTypeFilter !== 'All' && entry.tag_type !== tagTypeFilter) return false;
-      if (activeFilter === 'Active' && !entry.is_active) return false;
-      if (activeFilter === 'Inactive' && entry.is_active) return false;
       return true;
     });
-  }, [entries, assetTeamFilter, productTypeFilter, tagTypeFilter, activeFilter]);
+  }, [entries, assetTeamFilter, productTypeFilter, tagTypeFilter]);
 
   // Custom global filter function that includes entname and tplnr
   const globalFilterFn = useCallback((row: any, columnId: string, filterValue: string) => {
@@ -359,21 +356,17 @@ export const TableView: React.FC<TableViewProps> = ({
         cell: info => (
           <div className="flex gap-2">
             <button
-              className={`bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded transition-colors ${
-                info.row.original.is_active 
-                  ? 'hover:bg-green-50' 
-                  : 'hover:bg-yellow-50'
-              }`}
+              className="bg-transparent border-none cursor-pointer text-base p-1 px-2 rounded hover:bg-red-50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggleActiveCallback(info.row.original);
               }}
-              title={info.row.original.is_active ? 'Deactivate' : 'Activate'}
+              title="Deactivate"
             >
-              {info.row.original.is_active ? '✅' : '⏸️'}
+              🚫
             </button>
             <button
-              className="bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded hover:bg-blue-50 transition-colors"
+              className="bg-transparent border-none cursor-pointer text-base p-1 px-2 rounded hover:bg-blue-50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 handleEditCallback(info.row.original);
@@ -383,7 +376,7 @@ export const TableView: React.FC<TableViewProps> = ({
               ✏️
             </button>
             <button
-              className="bg-transparent border-none cursor-pointer text-xl p-1 px-2 rounded hover:bg-red-50 transition-colors"
+              className="bg-transparent border-none cursor-pointer text-base p-1 px-2 rounded hover:bg-red-50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteClickCallback(info.row.original);
@@ -458,13 +451,6 @@ export const TableView: React.FC<TableViewProps> = ({
   return (
     <div className="w-full p-6 bg-gray-50 min-h-screen">
       <div className="bg-white px-6 py-5 rounded-lg shadow-sm mb-5">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="m-0 text-gray-800 text-2xl font-semibold">Data Entries</h2>
-          <div className="text-gray-600 text-sm whitespace-nowrap">
-            Showing {table.getFilteredRowModel().rows.length} of {entries.length} entries
-          </div>
-        </div>
-        
         <div className="flex justify-between items-center gap-4 flex-wrap">
           {/* Filters on the left */}
           <div className="flex items-center gap-4 flex-wrap">
@@ -521,26 +507,13 @@ export const TableView: React.FC<TableViewProps> = ({
                 ))}
               </select>
             </div>
-
-            <div className="flex items-center gap-2">
-              <label htmlFor="active-filter" className="text-sm text-gray-700 font-medium whitespace-nowrap">
-                Status:
-              </label>
-              <select
-                id="active-filter"
-                value={activeFilter}
-                onChange={(e) => setActiveFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
-              >
-                <option value="All">All</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
           </div>
 
-          {/* Search and New Entry on the right */}
+          {/* Entry count, Search and Buttons on the right */}
           <div className="flex items-center gap-2">
+            <div className="text-gray-600 text-sm whitespace-nowrap">
+              Showing {table.getFilteredRowModel().rows.length} entries
+            </div>
             <input
               type="text"
               placeholder="Search all columns..."
@@ -584,7 +557,7 @@ export const TableView: React.FC<TableViewProps> = ({
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="px-2 py-1.5 text-left font-semibold text-gray-700 text-xs uppercase tracking-wide bg-gray-50 select-none cursor-pointer"
+                    className="px-2 py-2 text-left font-semibold text-gray-700 text-xs uppercase tracking-wide bg-gray-50 select-none cursor-pointer align-middle"
                   >
                     <div className="flex items-center gap-1">
                       {flexRender(

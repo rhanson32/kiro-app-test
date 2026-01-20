@@ -283,7 +283,7 @@ export class DataService implements IDataService {
         SELECT pi_tag, scada_tag, product_type, tag_type, aggregation_type, ent_hid, entname, tplnr, asset_team, is_active, id
         FROM ${this.tableName}
         ${whereClause}
-        ${whereClause ? 'AND' : 'WHERE'} is_active = true AND is_deleted = false
+        ${whereClause ? 'AND' : 'WHERE'} is_deleted = false
         ORDER BY ${sortBy} ${sortOrder}
         LIMIT ${batchSize} OFFSET ${offset}
       `;

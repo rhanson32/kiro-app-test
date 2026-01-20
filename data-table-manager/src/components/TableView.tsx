@@ -48,6 +48,7 @@ export const TableView: React.FC<TableViewProps> = ({
   const [assetTeamFilter, setAssetTeamFilter] = useState<string>('All');
   const [productTypeFilter, setProductTypeFilter] = useState<string>('All');
   const [tagTypeFilter, setTagTypeFilter] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<string>('Active'); // Default to Active only
   const [isCSVUploadOpen, setIsCSVUploadOpen] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>(''); // Local search input for debouncing
   const [isPending, startTransition] = useTransition(); // Track filtering state
@@ -273,9 +274,15 @@ export const TableView: React.FC<TableViewProps> = ({
       if (assetTeamFilter !== 'All' && entry.asset_team !== assetTeamFilter) return false;
       if (productTypeFilter !== 'All' && entry.product_type !== productTypeFilter) return false;
       if (tagTypeFilter !== 'All' && entry.tag_type !== tagTypeFilter) return false;
+      
+      // Status filter
+      if (statusFilter === 'Active' && !entry.is_active) return false;
+      if (statusFilter === 'Inactive' && entry.is_active) return false;
+      // 'All' shows both active and inactive
+      
       return true;
     });
-  }, [entries, assetTeamFilter, productTypeFilter, tagTypeFilter]);
+  }, [entries, assetTeamFilter, productTypeFilter, tagTypeFilter, statusFilter]);
 
   // Custom global filter function that includes entname and tplnr
   const globalFilterFn = useCallback((row: any, columnId: string, filterValue: string) => {
@@ -319,100 +326,116 @@ export const TableView: React.FC<TableViewProps> = ({
     () => [
       columnHelper.accessor('pi_tag', {
         header: 'PI Tag',
-        cell: info => info.getValue() || '-',
-        size: 200,
+        cell: info => {
+          const value = info.getValue() || '-';
+          return <span title={value}>{value}</span>;
+        },
+        size: 140,
       }),
       columnHelper.accessor('scada_tag', {
         header: 'SCADA Tag',
-        cell: info => info.getValue() || '-',
-        size: 200,
+        cell: info => {
+          const value = info.getValue() || '-';
+          return <span title={value}>{value}</span>;
+        },
+        size: 140,
       }),
       columnHelper.accessor('product_type', {
         header: 'Product Type',
         cell: info => info.getValue() || '-',
-        size: 150,
+        size: 110,
       }),
       columnHelper.accessor('tag_type', {
         header: 'Tag Type',
         cell: info => info.getValue() || '-',
-        size: 150,
+        size: 100,
       }),
       columnHelper.accessor('aggregation_type', {
         header: 'Aggregation',
         cell: info => info.getValue() || '-',
-        size: 150,
+        size: 100,
       }),
       columnHelper.accessor('ent_hid', {
         header: 'Entity HID',
         cell: info => info.getValue() || '-',
-        size: 120,
+        size: 90,
       }),
       columnHelper.accessor('entname', {
         header: 'Entity Name',
-        cell: info => info.getValue() || '-',
-        size: 180,
+        cell: info => {
+          const value = info.getValue() || '-';
+          return <span title={value}>{value}</span>;
+        },
+        size: 140,
       }),
       columnHelper.accessor('tplnr', {
         header: 'TPLNR',
         cell: info => info.getValue() || '-',
-        size: 120,
+        size: 90,
       }),
       columnHelper.accessor('asset_team', {
         header: 'Asset Team',
         cell: info => info.getValue() || '-',
-        size: 150,
-      }),
-      columnHelper.accessor('is_active', {
-        header: 'Status',
-        cell: info => (
-          <span className={`px-2 py-1 rounded text-xs font-medium ${
-            info.getValue() 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
-            {info.getValue() ? 'Active' : 'Inactive'}
-          </span>
-        ),
-        size: 100,
+        size: 110,
       }),
       columnHelper.display({
         id: 'actions',
         header: 'Actions',
-        cell: info => (
-          <div className="flex gap-2">
-            <button
-              className="bg-transparent border-none cursor-pointer text-base p-1 px-2 rounded hover:bg-red-50 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleActiveCallback(info.row.original);
-              }}
-              title="Deactivate"
-            >
-              🚫
-            </button>
-            <button
-              className="bg-transparent border-none cursor-pointer text-base p-1 px-2 rounded hover:bg-blue-50 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEditCallback(info.row.original);
-              }}
-              title="Edit"
-            >
-              ✏️
-            </button>
-            <button
-              className="bg-transparent border-none cursor-pointer text-base p-1 px-2 rounded hover:bg-red-50 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteClickCallback(info.row.original);
-              }}
-              title="Delete"
-            >
-              🗑️
-            </button>
-          </div>
-        ),
-        size: 120,
+        cell: info => {
+          const entry = info.row.original;
+          const isActive = entry.is_active;
+          
+          return (
+            <div className="flex gap-1">
+              {isActive ? (
+                <>
+                  <button
+                    className="bg-transparent border-none cursor-pointer text-sm p-1 rounded hover:bg-red-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleActiveCallback(entry);
+                    }}
+                    title="Deactivate"
+                  >
+                    🚫
+                  </button>
+                  <button
+                    className="bg-transparent border-none cursor-pointer text-sm p-1 rounded hover:bg-blue-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditCallback(entry);
+                    }}
+                    title="Edit"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    className="bg-transparent border-none cursor-pointer text-sm p-1 rounded hover:bg-red-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClickCallback(entry);
+                    }}
+                    title="Delete"
+                  >
+                    🗑️
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="bg-transparent border-none cursor-pointer text-sm p-1 rounded hover:bg-green-50 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleActiveCallback(entry);
+                  }}
+                  title="Reactivate"
+                >
+                  ✅
+                </button>
+              )}
+            </div>
+          );
+        },
+        size: 100,
       }),
     ],
     [handleToggleActiveCallback, handleEditCallback, handleDeleteClickCallback]
@@ -555,6 +578,26 @@ export const TableView: React.FC<TableViewProps> = ({
                 ))}
               </select>
             </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="status-filter" className="text-sm text-gray-700 font-medium whitespace-nowrap">
+                Status:
+              </label>
+              <select
+                id="status-filter"
+                value={statusFilter}
+                onChange={(e) => {
+                  startTransition(() => {
+                    setStatusFilter(e.target.value);
+                  });
+                }}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-teal-800 focus:ring-2 focus:ring-teal-800/10 transition-all bg-white cursor-pointer"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="All">All</option>
+              </select>
+            </div>
           </div>
 
           {/* Entry count, Search and Buttons on the right */}
@@ -598,7 +641,7 @@ export const TableView: React.FC<TableViewProps> = ({
 
       <div 
         ref={tableContainerRef}
-        className="h-[calc(100vh-200px)] overflow-y-auto overflow-x-auto bg-white rounded-lg shadow-md relative"
+        className="h-[calc(100vh-200px)] overflow-y-auto bg-white rounded-lg shadow-md relative"
       >
         {/* Filtering overlay */}
         {isPending && (

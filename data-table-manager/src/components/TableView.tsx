@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback, useDeferredValue, useTransition } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useDeferredValue, useTransition, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -9,6 +9,7 @@ import {
   SortingState,
   ColumnFiltersState,
 } from '@tanstack/react-table';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { DataEntry, DataEntryFormData } from '../types/DataEntry';
 import { getDataService } from '../services/DataService';
 import { formatDateTime, formatNumber } from '../utils/formatting';
@@ -50,6 +51,9 @@ export const TableView: React.FC<TableViewProps> = ({
   const [isCSVUploadOpen, setIsCSVUploadOpen] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>(''); // Local search input for debouncing
   const [isPending, startTransition] = useTransition(); // Track filtering state
+  
+  // Ref for virtual scrolling container
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   
   // Use deferred value for search to prevent blocking UI
   const deferredSearchInput = useDeferredValue(searchInput);
@@ -431,6 +435,17 @@ export const TableView: React.FC<TableViewProps> = ({
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  // Get the filtered rows for virtualization
+  const { rows } = table.getRowModel();
+
+  // Virtual scrolling setup
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 33, // Estimated row height in pixels
+    overscan: 10, // Render 10 extra rows above/below viewport for smooth scrolling
+  });
+
   if (loading) {
     return (
       <div className="w-full p-6 bg-gray-50 min-h-screen">
@@ -581,7 +596,10 @@ export const TableView: React.FC<TableViewProps> = ({
         </div>
       </div>
 
-      <div className="h-[calc(100vh-200px)] overflow-y-auto overflow-x-auto bg-white rounded-lg shadow-md relative">
+      <div 
+        ref={tableContainerRef}
+        className="h-[calc(100vh-200px)] overflow-y-auto overflow-x-auto bg-white rounded-lg shadow-md relative"
+      >
         {/* Filtering overlay */}
         {isPending && (
           <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] z-20 flex items-center justify-center">
@@ -618,15 +636,20 @@ export const TableView: React.FC<TableViewProps> = ({
               </tr>
             ))}
           </thead>
-          <tbody>
-            {table.getRowModel().rows.map(row => {
+          <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+            {rowVirtualizer.getVirtualItems().map(virtualRow => {
+              const row = rows[virtualRow.index];
               const entry = row.original;
               
               return (
                 <tr
                   key={row.id}
                   onClick={() => onEntrySelect?.(entry)}
-                  className="border-b border-gray-300 hover:bg-gray-50 cursor-pointer transition-colors bg-white"
+                  className="border-b border-gray-300 hover:bg-gray-50 cursor-pointer transition-colors bg-white absolute w-full"
+                  style={{
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
                 >
                   {row.getVisibleCells().map(cell => (
                     <td key={cell.id} className="px-2 py-1 text-xs text-gray-800 truncate overflow-hidden whitespace-nowrap">

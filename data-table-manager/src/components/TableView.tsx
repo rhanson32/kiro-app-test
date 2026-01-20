@@ -330,7 +330,7 @@ export const TableView: React.FC<TableViewProps> = ({
           const value = info.getValue() || '-';
           return <span title={value}>{value}</span>;
         },
-        size: 140,
+        size: 180,
       }),
       columnHelper.accessor('scada_tag', {
         header: 'SCADA Tag',
@@ -338,7 +338,7 @@ export const TableView: React.FC<TableViewProps> = ({
           const value = info.getValue() || '-';
           return <span title={value}>{value}</span>;
         },
-        size: 140,
+        size: 180,
       }),
       columnHelper.accessor('product_type', {
         header: 'Product Type',
@@ -366,7 +366,7 @@ export const TableView: React.FC<TableViewProps> = ({
           const value = info.getValue() || '-';
           return <span title={value}>{value}</span>;
         },
-        size: 140,
+        size: 180,
       }),
       columnHelper.accessor('tplnr', {
         header: 'TPLNR',
@@ -377,6 +377,19 @@ export const TableView: React.FC<TableViewProps> = ({
         header: 'Asset Team',
         cell: info => info.getValue() || '-',
         size: 110,
+      }),
+      columnHelper.accessor('is_active', {
+        header: 'Status',
+        cell: info => (
+          <span className={`px-2 py-1 rounded text-xs font-medium ${
+            info.getValue() 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {info.getValue() ? 'Active' : 'Inactive'}
+          </span>
+        ),
+        size: 80,
       }),
       columnHelper.display({
         id: 'actions',

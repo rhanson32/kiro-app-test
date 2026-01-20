@@ -9,13 +9,25 @@ const SSOLogin: React.FC = () => {
   const auth = useAuth();
 
   const handleSSOLogin = () => {
+    // Clear any stale auth state before redirecting
+    sessionStorage.clear();
+    localStorage.removeItem('oidc.user');
     auth.signinRedirect();
+  };
+
+  const handleClearAndRetry = () => {
+    // Clear all auth-related storage
+    sessionStorage.clear();
+    localStorage.clear();
+    // Reload the page to start fresh
+    window.location.reload();
   };
 
   if (auth.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-teal-800">
         <div className="bg-white rounded-xl shadow-2xl p-16 max-w-md w-full text-center">
+          <div className="w-10 h-10 border-4 border-gray-300 border-t-teal-800 rounded-full animate-spin mb-4 mx-auto"></div>
           <p>Loading...</p>
         </div>
       </div>
@@ -23,17 +35,38 @@ const SSOLogin: React.FC = () => {
   }
 
   if (auth.error) {
+    // Check if it's a state mismatch error
+    const isStateMismatch = auth.error.message.includes('state') || 
+                           auth.error.message.includes('No matching state');
+    
     return (
       <div className="flex items-center justify-center min-h-screen bg-teal-800">
         <div className="bg-white rounded-xl shadow-2xl p-16 max-w-md w-full text-center">
           <h1 className="text-3xl font-semibold text-gray-800 mb-3">XREF Manager</h1>
-          <p className="text-red-600">Error: {auth.error.message}</p>
-          <button 
-            className="w-full mt-10 px-6 py-4 bg-teal-800 text-white rounded-lg text-base font-semibold hover:bg-teal-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
-            onClick={handleSSOLogin}
-          >
-            Try Again
-          </button>
+          
+          {isStateMismatch ? (
+            <>
+              <p className="text-gray-600 mb-4">Authentication session expired or invalid.</p>
+              <p className="text-sm text-gray-500 mb-6">Please try logging in again.</p>
+              <button 
+                className="w-full px-6 py-4 bg-teal-800 text-white rounded-lg text-base font-semibold hover:bg-teal-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+                onClick={handleClearAndRetry}
+              >
+                Clear Session & Login
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-red-600 mb-2">Authentication Error</p>
+              <p className="text-sm text-gray-600 mb-6">{auth.error.message}</p>
+              <button 
+                className="w-full px-6 py-4 bg-teal-800 text-white rounded-lg text-base font-semibold hover:bg-teal-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+                onClick={handleSSOLogin}
+              >
+                Try Again
+              </button>
+            </>
+          )}
         </div>
       </div>
     );

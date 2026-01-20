@@ -610,15 +610,16 @@ export const TableView: React.FC<TableViewProps> = ({
           </div>
         )}
         
-        <table className="w-full border-collapse table-fixed">
+        <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
           <thead className="bg-gray-50 border-b-2 border-gray-300 sticky top-0 z-10">
             {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
+              <tr key={headerGroup.id} className="flex w-full">
                 {headerGroup.headers.map(header => (
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="px-2 py-2 text-left font-semibold text-gray-700 text-xs uppercase tracking-wide bg-gray-50 select-none cursor-pointer align-middle"
+                    className="px-2 py-2 text-left font-semibold text-gray-700 text-xs uppercase tracking-wide bg-gray-50 select-none cursor-pointer align-middle flex-shrink-0"
+                    style={{ width: `${header.getSize()}px` }}
                   >
                     <div className="flex items-center gap-1">
                       {flexRender(
@@ -636,7 +637,7 @@ export const TableView: React.FC<TableViewProps> = ({
               </tr>
             ))}
           </thead>
-          <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+          <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', display: 'block' }}>
             {rowVirtualizer.getVirtualItems().map(virtualRow => {
               const row = rows[virtualRow.index];
               const entry = row.original;
@@ -645,14 +646,22 @@ export const TableView: React.FC<TableViewProps> = ({
                 <tr
                   key={row.id}
                   onClick={() => onEntrySelect?.(entry)}
-                  className="border-b border-gray-300 hover:bg-gray-50 cursor-pointer transition-colors bg-white absolute w-full"
+                  className="border-b border-gray-300 hover:bg-gray-50 cursor-pointer transition-colors bg-white flex w-full"
                   style={{
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
                   }}
                 >
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="px-2 py-1 text-xs text-gray-800 truncate overflow-hidden whitespace-nowrap">
+                    <td 
+                      key={cell.id} 
+                      className="px-2 py-1 text-xs text-gray-800 truncate overflow-hidden whitespace-nowrap flex-shrink-0"
+                      style={{ width: `${cell.column.getSize()}px` }}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

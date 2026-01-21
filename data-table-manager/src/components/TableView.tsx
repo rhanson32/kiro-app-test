@@ -374,7 +374,7 @@ export const TableView: React.FC<TableViewProps> = ({
         size: 100,
       }),
       columnHelper.accessor('ent_hid', {
-        header: 'Entity HID',
+        header: 'FDC HID',
         cell: info => info.getValue() || '-',
         size: 90,
       }),

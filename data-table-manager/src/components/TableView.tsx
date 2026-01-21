@@ -330,7 +330,7 @@ export const TableView: React.FC<TableViewProps> = ({
           const value = info.getValue() || '-';
           return <span title={value}>{value}</span>;
         },
-        size: 180,
+        size: 220,
       }),
       columnHelper.accessor('scada_tag', {
         header: 'SCADA Tag',
@@ -338,7 +338,7 @@ export const TableView: React.FC<TableViewProps> = ({
           const value = info.getValue() || '-';
           return <span title={value}>{value}</span>;
         },
-        size: 180,
+        size: 220,
       }),
       columnHelper.accessor('product_type', {
         header: 'Product Type',
@@ -348,7 +348,7 @@ export const TableView: React.FC<TableViewProps> = ({
       columnHelper.accessor('tag_type', {
         header: 'Tag Type',
         cell: info => info.getValue() || '-',
-        size: 100,
+        size: 130,
       }),
       columnHelper.accessor('aggregation_type', {
         header: 'Aggregation',
@@ -366,7 +366,7 @@ export const TableView: React.FC<TableViewProps> = ({
           const value = info.getValue() || '-';
           return <span title={value}>{value}</span>;
         },
-        size: 180,
+        size: 220,
       }),
       columnHelper.accessor('tplnr', {
         header: 'TPLNR',

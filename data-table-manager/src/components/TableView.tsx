@@ -136,6 +136,13 @@ export const TableView: React.FC<TableViewProps> = ({
     }
   };
 
+  // Only load entries when connection is tested AND data hasn't been loaded yet
+  useEffect(() => {
+    if (connectionTested && !dataLoaded) {
+      loadEntries();
+    }
+  }, [connectionTested, dataLoaded]);
+
   const handleCreateNew = () => {
     setFormMode('create');
     setSelectedEntry(null);

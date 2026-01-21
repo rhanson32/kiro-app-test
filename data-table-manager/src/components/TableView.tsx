@@ -71,6 +71,10 @@ export const TableView: React.FC<TableViewProps> = ({
     // Only test connection and load if data hasn't been loaded yet
     if (!dataLoaded) {
       testConnectionFirst();
+    } else {
+      // Use cached data
+      setEntries(cachedEntries);
+      setLoading(false);
     }
   }, [dataLoaded]);
 
@@ -131,12 +135,6 @@ export const TableView: React.FC<TableViewProps> = ({
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (connectionTested) {
-      loadEntries();
-    }
-  }, [connectionTested]);
 
   const handleCreateNew = () => {
     setFormMode('create');

@@ -672,7 +672,7 @@ export const TableView: React.FC<TableViewProps> = ({
 
       <div 
         ref={tableContainerRef}
-        className="h-[calc(100vh-200px)] overflow-y-auto bg-white rounded-lg shadow-md relative"
+        className="h-[calc(100vh-280px)] overflow-y-auto bg-white rounded-lg shadow-md relative"
       >
         {/* Filtering overlay */}
         {isPending && (

@@ -93,6 +93,10 @@ function App() {
   const [selectedEntry, setSelectedEntry] = useState<DataEntry | null>(null);
   const [currentPage, setCurrentPage] = useState<string>('data-entries');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // Lift data state to App level so it persists across page navigation
+  const [cachedEntries, setCachedEntries] = useState<DataEntry[]>([]);
+  const [dataLoaded, setDataLoaded] = useState<boolean>(false);
 
   const handleSignOut = () => {
     const clientId = process.env.REACT_APP_USER_POOL_CLIENT_ID;
@@ -119,6 +123,10 @@ function App() {
             onEntryEdit={(entry) => console.log('Edit:', entry)}
             onEntryDelete={(entry) => console.log('Delete:', entry)}
             userEmail={userEmail}
+            cachedEntries={cachedEntries}
+            setCachedEntries={setCachedEntries}
+            dataLoaded={dataLoaded}
+            setDataLoaded={setDataLoaded}
           />
         );
       case 'config':

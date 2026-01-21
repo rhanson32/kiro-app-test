@@ -22,6 +22,10 @@ interface TableViewProps {
   onEntryEdit?: (entry: DataEntry) => void;
   onEntryDelete?: (entry: DataEntry) => void;
   userEmail?: string;
+  cachedEntries: DataEntry[];
+  setCachedEntries: (entries: DataEntry[]) => void;
+  dataLoaded: boolean;
+  setDataLoaded: (loaded: boolean) => void;
 }
 
 const columnHelper = createColumnHelper<DataEntry>();
@@ -30,12 +34,16 @@ export const TableView: React.FC<TableViewProps> = ({
   onEntrySelect,
   onEntryEdit,
   onEntryDelete,
-  userEmail
+  userEmail,
+  cachedEntries,
+  setCachedEntries,
+  dataLoaded,
+  setDataLoaded
 }) => {
-  const [entries, setEntries] = useState<DataEntry[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [entries, setEntries] = useState<DataEntry[]>(cachedEntries);
+  const [loading, setLoading] = useState<boolean>(!dataLoaded);
   const [error, setError] = useState<string | null>(null);
-  const [connectionTested, setConnectionTested] = useState<boolean>(false);
+  const [connectionTested, setConnectionTested] = useState<boolean>(dataLoaded);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState<string>('');
@@ -60,8 +68,11 @@ export const TableView: React.FC<TableViewProps> = ({
   const deferredSearchInput = useDeferredValue(searchInput);
 
   useEffect(() => {
-    testConnectionFirst();
-  }, []);
+    // Only test connection and load if data hasn't been loaded yet
+    if (!dataLoaded) {
+      testConnectionFirst();
+    }
+  }, [dataLoaded]);
 
   // Debounce search input
   useEffect(() => {
@@ -111,6 +122,8 @@ export const TableView: React.FC<TableViewProps> = ({
 
       console.log('Sample entry:', result.data[0]);
       setEntries(result.data);
+      setCachedEntries(result.data); // Cache in App state
+      setDataLoaded(true); // Mark as loaded
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading entries:', err);

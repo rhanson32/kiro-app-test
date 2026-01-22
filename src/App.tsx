@@ -131,13 +131,6 @@ function App() {
         );
       case 'config':
         return <ConfigPage />;
-      case 'user-management':
-        return (
-          <div className="p-6">
-            <h1 className="text-2xl font-semibold text-gray-800 mb-4">User Management</h1>
-            <p className="text-gray-600">User management functionality coming soon...</p>
-          </div>
-        );
       default:
         return (
           <div className="p-6">
@@ -161,21 +154,6 @@ function App() {
             ☰
           </button>
           <h1 className="text-xl font-semibold text-gray-800">XREF Manager</h1>
-        </div>
-        <div className="flex items-center gap-5">
-          <div className="relative group">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-xl font-semibold text-white cursor-pointer">
-              {userName.charAt(0).toUpperCase()}
-            </div>
-            <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <button 
-                className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                onClick={handleSignOut}
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
         </div>
       </header>
 

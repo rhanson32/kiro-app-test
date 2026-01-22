@@ -540,7 +540,7 @@ export const TableView: React.FC<TableViewProps> = ({
 
   return (
     <div className="w-full p-6 bg-gray-50 min-h-screen">
-      <div className="bg-white px-6 py-5 rounded-lg shadow-sm mb-5">
+      <div className="bg-white px-6 py-5 rounded-lg shadow-md mb-5">
         <div className="flex justify-between items-center gap-4 flex-wrap">
           {/* Filters on the left */}
           <div className="flex items-center gap-4 flex-wrap">

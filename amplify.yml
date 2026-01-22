@@ -3,15 +3,14 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd data-table-manager
         - npm ci
     build:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: data-table-manager/build
+    baseDirectory: build
     files:
       - '**/*'
   cache:
     paths:
-      - data-table-manager/node_modules/**/*
+      - node_modules/**/*

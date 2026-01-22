@@ -4,7 +4,7 @@
 
 ### Step 1: Configure Local Environment
 
-1. Open `data-table-manager/.env` file
+1. Open `.env` file in the root directory
 2. Fill in the following values:
 
 #### AWS Cognito Values (from AWS Console)
@@ -21,7 +21,6 @@
 ### Step 2: Test Locally
 
 ```bash
-cd data-table-manager
 npm start
 ```
 

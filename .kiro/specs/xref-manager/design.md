@@ -331,7 +331,7 @@ The application will use a dual testing approach combining unit tests and proper
 ### Property-Based Testing Approach
 - **fast-check** library for JavaScript property-based testing
 - Minimum of 100 iterations per property test to ensure thorough validation
-- Each property test tagged with format: **Feature: data-table-manager, Property {number}: {property_text}**
+- Each property test tagged with format: **Feature: xref-manager, Property {number}: {property_text}**
 - Generate random test data to verify universal properties
 - Test data transformation and validation logic
 - Verify CRUD operations maintain data integrity
